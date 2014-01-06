@@ -72,10 +72,8 @@ parallelize <- function(sc, coll, numSlices = 1) {
   javaSerializedSlices <- .jarray(lapply(serializedSlices, .jarray),
                                   contents.class = "[B")
 
-  jrddType = "Lorg/apache/spark/api/java/JavaRDD;"
-
   jrdd <- .jcall("sparkr/RRDD",
-                 jrddType,
+                 "Lorg/apache/spark/api/java/JavaRDD;",
                  "createRDDFromArray",
                  sc,
                  javaSerializedSlices)

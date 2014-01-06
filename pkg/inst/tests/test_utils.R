@@ -14,7 +14,7 @@ test_that("convertJListToRList() gives back (deserializes) the original JLists
   rList <- convertJListToRList(jList, flatten = TRUE)
   expect_equal(rList, nums)
 
-  strs <- as.list("hello", "spark")
+  strs <- list("hello", "spark")
   rdd <- parallelize(sc, strs, 2L)
   jList <- .jcall(rdd@jrdd, "Ljava/util/List;", "collect")
   rList <- convertJListToRList(jList, flatten = TRUE)
