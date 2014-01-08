@@ -78,3 +78,6 @@ writeLines(unlist(lapply(kPoints, paste, collapse = " ")))
 ## Stops Rprof and display results
 Rprof(NULL)
 summaryRprof("kmeans.R.prof")
+
+## Persist the Web UI report
+system("wget -E -r -k localhost:4040")

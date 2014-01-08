@@ -33,3 +33,6 @@ cat("Num elements in RDD ", count(rdd), "\n")
 ## Stops Rprof and display results
 Rprof(NULL)
 summaryRprof("pi.R.prof")
+
+## Persist the Web UI report
+system("wget -E -r -k localhost:4040")
