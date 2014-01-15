@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>SparkR by amplab-extras</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/amplab-extras/SparkR-pkg">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/amplab-extras/SparkR-pkg/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/amplab-extras/SparkR-pkg/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>SparkR</h1>
+          <p>R frontend for Spark</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/amplab-extras">amplab-extras</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h1>
+<a name="r-on-spark" class="anchor" href="#r-on-spark"><span class="octicon octicon-link"></span></a>R on Spark</h1>
+
+<p>SparkR is an R package that provides a light-weight frontend to use Apache Spark from R. SparkR exposes the Spark API through the <code>RDD</code> class and allows users to interactively run jobs from the R shell on a cluster.</p>
+
+<h2>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
+
+<h1>
+<a name="rdds-as-distributed-lists" class="anchor" href="#rdds-as-distributed-lists"><span class="octicon octicon-link"></span></a>RDDs as Distributed Lists</h1>
+
+<p>SparkR exposes the RDD API of Spark as distributed lists in R. For example we can read an input file from HDFS and process every line using <code>lapply</code> on a RDD.</p>
+
+<pre><code>  sc &lt;- sparkR.init("local")
+  lines &lt;- textFile(sc, "hdfs://data.txt")
+  wordsPerLine &lt;- lapply(lines, function(line) { length(unlist(strsplit(line, " "))) })
+</code></pre>
+
+<p>In addition to <code>lapply</code>, SparkR also allows closures to be applied on every partition using <code>lapplyWithPartition</code>. Other supported RDD functions include operations like <code>reduce</code>, <code>reduceByKey</code>, <code>groupByKey</code> and <code>collect</code>.</p>
+
+<h1>
+<a name="serializing-closures" class="anchor" href="#serializing-closures"><span class="octicon octicon-link"></span></a>Serializing closures</h1>
+
+<p>SparkR automatically serializes the necessary variables to execute a function on the cluster. For example if you use some global variables in a function passed to <code>lapply</code>, SparkR will automatically capture these variables and copy them to the cluster. An example of using a random weight vector to initialize a matrix is shown below</p>
+
+<pre><code>   lines &lt;- textFile(sc, "hdfs://data.txt")
+   initialWeights &lt;- runif(n=D, min = -1, max = 1)
+   createMatrix &lt;- function(line) {
+     as.numeric(unlist(strsplit(line, " "))) %*% t(initialWeights)
+   }
+   # initialWeights is automatically serialized
+   matrixRDD &lt;- lapply(lines, createMatrix)
+</code></pre>
+
+<h1>
+<a name="using-existing-r-packages" class="anchor" href="#using-existing-r-packages"><span class="octicon octicon-link"></span></a>Using existing R packages</h1>
+
+<p>SparkR also allows easy use of existing R packages inside closures. The <code>includePackage</code> command can be used to indicate packages that should be loaded before every closure is executed on the cluster. For example to use the <code>Matrix</code> in a closure applied on each partition of an RDD, you could run</p>
+
+<pre><code>  generateSparse &lt;- function(x) {
+    # Use sparseMatrix function from the Matrix package
+    sparseMatrix(i=c(1, 2, 3), j=c(1, 2, 3), x=c(1, 2, 3))
+  }
+  includePackage(sc, Matrix)
+  sparseMat &lt;- lapplyPartition(rdd, generateSparse)
+</code></pre>
+
+<h2>
+<a name="installing-sparkr" class="anchor" href="#installing-sparkr"><span class="octicon octicon-link"></span></a>Installing SparkR</h2>
+
+<p>SparkR requires Scala 2.10 and Spark version &gt;= 0.9.0 and depends on R packages <code>rJava</code> and <code>testthat</code> (only required for running unit tests). </p>
+
+<p>If you wish to try out SparkR, you can use <code>install_git</code> from the <code>devtools</code> package to directly install the package.</p>
+
+<pre><code>library(devtools)
+install_git("https://github.com/amplab-extras/SparkR-pkg.git",
+            subdir="pkg")
+</code></pre>
+
+<p>If you wish to clone the repository and build from source, you can using the following script to build the package locally.</p>
+
+<pre><code>./install-dev.sh
+</code></pre>
+
+<h2>
+<a name="running-sparkr" class="anchor" href="#running-sparkr"><span class="octicon octicon-link"></span></a>Running sparkR</h2>
+
+<p>If you have installed it directly from github, you can include the SparkR package and then initialize a SparkContext. For example to run with a local Spark master you can launch R and then run</p>
+
+<pre><code>library(SparkR)
+sc &lt;- sparkR.init(master="local")
+</code></pre>
+
+<p>If you have cloned and built SparkR, you can start using it by launching the SparkR shell with</p>
+
+<pre><code>./sparkR
+</code></pre>
+
+<p>SparkR also comes with several sample programs in the <code>examples</code> directory.
+To run one of them, use <code>./sparkR &lt;filename&gt; &lt;args&gt;</code>. For example:</p>
+
+<pre><code>./sparkR examples/pi.R local[2]  
+</code></pre>
+
+<p>You can also run the unit-tests for SparkR by running</p>
+
+<pre><code>./run-tests.sh
+</code></pre>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
