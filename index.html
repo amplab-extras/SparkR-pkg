@@ -90,11 +90,10 @@
 
 <p>SparkR requires Scala 2.10 and Spark version &gt;= 0.9.0 and depends on R packages <code>rJava</code> and <code>testthat</code> (only required for running unit tests). </p>
 
-<p>If you wish to try out SparkR, you can use <code>install_git</code> from the <code>devtools</code> package to directly install the package.</p>
+<p>If you wish to try out SparkR, you can use <code>install_github</code> from the <code>devtools</code> package to directly install the package.</p>
 
 <pre><code>library(devtools)
-install_git("https://github.com/amplab-extras/SparkR-pkg.git",
-            subdir="pkg")
+install_github("amplab-extras/SparkR-pkg", subdir="pkg")
 </code></pre>
 
 <p>If you wish to clone the repository and build from source, you can using the following script to build the package locally.</p>
