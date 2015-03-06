@@ -1,5 +1,24 @@
 # Worker class
 
+# Utility function get get current system time in milliseconds
+# this code snippet borrowed from [R.utils](cran.r-project.org/package=R.utils)
+currentTimeMillis <- function() {
+  secs <- as.numeric(Sys.time())
+  times <- proc.time()
+  time <- times[2]  # System CPU time
+
+  # CPU time is not available on Win 98/Me;
+  if (is.na(time))
+    time <- times[3] # Total elapsed times
+  (secs + as.numeric(time) %% 1) * 1000
+}
+
+# Constants
+SpecialLengths <- list(END_OF_STERAM = 0L, TIMING_DATA = -1L)
+
+# Timing R process boot
+bootTime <- currentTimeMillis()
+
 port <- as.integer(Sys.getenv("SPARKR_WORKER_PORT"))
 
 inputCon <- socketConnection(port = port, blocking = TRUE, open = "rb")
@@ -34,6 +53,9 @@ computeFunc <- unserialize(SparkR:::readRawLen(inputCon, funcLen))
 env <- environment(computeFunc)
 parent.env(env) <- .GlobalEnv  # Attach under global environment.
 
+# Timing init envs for computing
+initTime <- currentTimeMillis()
+
 # Read and set broadcast variables
 numBroadcastVars <- SparkR:::readInt(inputCon)
 if (numBroadcastVars > 0) {
@@ -44,6 +66,9 @@ if (numBroadcastVars > 0) {
   }
 }
 
+# Timing broadcast
+broadcastTime <- currentTimeMillis()
+
 # If -1: read as normal RDD; if >= 0, treat as pairwise RDD and treat the int
 # as number of partitions to create.
 numPartitions <- SparkR:::readInt(inputCon)
@@ -52,19 +77,31 @@ isEmpty <- SparkR:::readInt(inputCon)
 
 if (isEmpty != 0) {
 
-  if (numPartitions == -1) {
+  if (numPartitions < 0) {
     if (isInputSerialized) {
       # Now read as many characters as described in funcLen
       data <- SparkR:::readDeserialize(inputCon)
     } else {
       data <- readLines(inputCon)
     }
+    # Timing reading input data for execution
+    inputTime <- currentTimeMillis()
+
     output <- computeFunc(splitIndex, data)
+    # Timing computing
+    computeTime <- currentTimeMillis()
+
     if (isOutputSerialized) {
       SparkR:::writeRawSerialize(outputCon, output)
     } else {
-      SparkR:::writeStrings(outputCon, output)
+      lapply(output,
+             function(line) {
+               # write lines one-by-one with flag
+               SparkR:::writeString(outputCon, line)
+             })
     }
+    # Timing output
+    outputTime <- currentTimeMillis()
   } else {
     if (isInputSerialized) {
       # Now read as many characters as described in funcLen
@@ -72,6 +109,8 @@ if (isEmpty != 0) {
     } else {
       data <- readLines(inputCon)
     }
+    # Timing reading input data for execution
+    inputTime <- currentTimeMillis()
 
     res <- new.env()
 
@@ -89,6 +128,8 @@ if (isEmpty != 0) {
       res[[bucket]] <- acc
     }
     invisible(lapply(data, hashTupleToEnvir))
+    # Timing computing
+    computeTime <- currentTimeMillis()
 
     # Step 2: write out all of the environment as key-value pairs.
     for (name in ls(res)) {
@@ -98,13 +139,30 @@ if (isEmpty != 0) {
       length(res[[name]]$data) <- res[[name]]$counter
       SparkR:::writeRawSerialize(outputCon, res[[name]]$data)
     }
+    # Timing output
+    outputTime <- currentTimeMillis()
   }
+} else {
+  inputTime <- broadcastTime
+  computeTime <- broadcastTime
+  outputTime <- broadcastTime
 }
 
+# Timing finish
+finishTime <- currentTimeMillis()
+
+# Report timing
+SparkR:::writeInt(outputCon, SpecialLengths$TIMING_DATA)
+SparkR:::writeDouble(outputCon, bootTime)
+SparkR:::writeDouble(outputCon, initTime)
+SparkR:::writeDouble(outputCon, broadcastTime)
+SparkR:::writeDouble(outputCon, inputTime)
+SparkR:::writeDouble(outputCon, computeTime)
+SparkR:::writeDouble(outputCon, outputTime)
+SparkR:::writeDouble(outputCon, finishTime)
+
 # End of output
-if (isOutputSerialized) {
-  SparkR:::writeInt(outputCon, 0L)
-}
+SparkR:::writeInt(outputCon, SpecialLengths$END_OF_STERAM)
 
 close(outputCon)
 close(inputCon)
