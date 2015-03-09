@@ -1,6 +1,6 @@
 # Worker class
 
-# Utility function get get current system time in milliseconds
+# Utility function to get current system time in milliseconds
 # this code snippet borrowed from [R.utils](cran.r-project.org/package=R.utils)
 currentTimeMillis <- function() {
   secs <- as.numeric(Sys.time())
@@ -77,7 +77,7 @@ isEmpty <- SparkR:::readInt(inputCon)
 
 if (isEmpty != 0) {
 
-  if (numPartitions < 0) {
+  if (numPartitions == -1) {
     if (isInputSerialized) {
       # Now read as many characters as described in funcLen
       data <- SparkR:::readDeserialize(inputCon)
