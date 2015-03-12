@@ -163,13 +163,23 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
             dataOut.writeInt(1)
           }
 
-          for (elem <- iter) {
+          def writeElem(elem: Any): Unit = {
             if (parentSerialized) {
               val elemArr = elem.asInstanceOf[Array[Byte]]
               dataOut.writeInt(elemArr.length)
               dataOut.write(elemArr, 0, elemArr.length)
             } else {
               printOut.println(elem)
+            }
+          }
+
+          for (elem <- iter) {
+            elem match {
+              case (key, value) =>
+                writeElem(key)
+                writeElem(value)
+              case _ =>
+                writeElem(elem)
             }
           }
           stream.flush()
@@ -191,7 +201,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
 }
 
 /**
- * Form an RDD[Int, Array[Byte])] from key-value pairs returned from R.
+ * Form an RDD[(Int, Array[Byte])] from key-value pairs returned from R.
  * This is used by SparkR's shuffle operations.
  */
 private class PairwiseRRDD[T: ClassTag](
