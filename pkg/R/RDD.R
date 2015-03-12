@@ -1352,23 +1352,40 @@ setMethod("zipRDD",
             if (n1 != n2) {
               stop("Can only zip RDDs which have the same number of partitions.")
             }
+
+            if (x@env$serialized != other@env$serialized || x@env$serialized) {
+              # Even if any RDD is serialized, we need to reserialize it
+              # to make sure its partitions are encoded as a single byte array.
+              # For example, partitions of an RDD generated from partitionBy() may be
+              # encoded as multiple byte arrays.
+              x <- reserialize(x)
+              other <- reserialize(other)
+            }
             
             zippedJRDD <- callJMethod(getJRDD(x), "zip", getJRDD(other))
+            # The zippedRDD's elements are of scala Tuple2 type. The serialized
+            # flag Here is used for the elements inside the tuples.
             zippedRDD <- RDD(zippedJRDD, x@env$serialized)
             
             partitionFunc <- function(split, part) {
               len <- length(part)
               if (len > 0) {
                 # len must be multiple of 2
-                keys <- part[1 : (len / 2)]
-                values <- part[(len / 2 + 1) : (len)]
+                if (x@env$serialized) {
+                  keys <- part[1 : (len / 2)]
+                  values <- part[(len / 2 + 1) : (len)]
+                } else {
+                  keys <- part[c(TRUE, FALSE)]
+                  values <- part[c(FALSE, TRUE)]
+                }
                 mapply(
-                  function(k, v) {
-                    list(k, v)
-                  },
-                  keys,
-                  values,
-                  SIMPLIFY = FALSE)                
+                    function(k, v) {
+                      list(k, v)
+                    },
+                    keys,
+                    values,
+                    SIMPLIFY = FALSE,
+                    USE.NAMES = FALSE)
               } else {
                 part
               }
