@@ -1373,7 +1373,7 @@ setMethod("zipRDD",
                 # len must be multiple of 2
                 if (x@env$serialized) {
                   keys <- part[1 : (len / 2)]
-                  values <- part[(len / 2 + 1) : (len)]
+                  values <- part[(len / 2 + 1) : len]
                 } else {
                   keys <- part[c(TRUE, FALSE)]
                   values <- part[c(FALSE, TRUE)]
