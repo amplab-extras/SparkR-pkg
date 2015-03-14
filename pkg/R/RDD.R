@@ -1353,6 +1353,17 @@ setMethod("zipRDD",
               stop("Can only zip RDDs which have the same number of partitions.")
             }
 
+            # Check if corresponding partitions of both RDDs have the same
+            # number of elements.
+            getPartitionLengthFunc <- function(part) {
+              list(length(part))
+            }
+            partitionLengths1 <- collect(lapplyPartition(x, getPartitionLengthFunc))
+            partitionLengths2 <- collect(lapplyPartition(other, getPartitionLengthFunc))
+            if (!identical(partitionLengths1, partitionLengths2)) {
+              stop("Can only zip RDDs with same number of elements in each pair of corresponding partitions.")
+            }
+
             if (x@env$serialized != other@env$serialized || x@env$serialized) {
               # Even if any RDD is serialized, we need to reserialize it
               # to make sure its partitions are encoded as a single byte array.
@@ -1367,11 +1378,12 @@ setMethod("zipRDD",
             # flag Here is used for the elements inside the tuples.
             zippedRDD <- RDD(zippedJRDD, x@env$serialized)
             
+            serialized <- x@env$serialized
             partitionFunc <- function(split, part) {
               len <- length(part)
               if (len > 0) {
                 # len must be multiple of 2
-                if (x@env$serialized) {
+                if (serialized) {
                   keys <- part[1 : (len / 2)]
                   values <- part[(len / 2 + 1) : len]
                 } else {
