@@ -305,7 +305,8 @@ processClosure <- function(node, oldEnv, defVars, checkedFuncs, newEnv) {
               !(nodeChar %in% getNamespaceExports("SparkR")))) {  # Only include SparkR internals.
           # Set parameter 'inherits' to FALSE since we do not need to search in
           # attached package environments.
-          if (exists(nodeChar, envir = func.env, inherits = FALSE)) {
+          if (tryCatch(exists(nodeChar, envir = func.env, inherits = FALSE),
+                       error = function(e) { FALSE })) {
             obj <- get(nodeChar, envir = func.env, inherits = FALSE)
             if (is.function(obj)) {  # If the node is a function call.
               funcList <- mget(nodeChar, envir = checkedFuncs, inherits = F, 

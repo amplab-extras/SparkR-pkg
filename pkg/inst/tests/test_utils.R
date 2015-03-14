@@ -62,15 +62,15 @@ test_that("cleanClosure on R functions", {
   expect_equal(actual, g)
 
   base <- c(1, 2, 3)
-  l <- list(field = 1)
-  field <- 2
+  l <- list(field = matrix(1))
+  field <- matrix(2)
   defUse <- 3
   g <- function(x) { x + y }
   f <- function(x) {
     defUse <- base::as.integer(x) + 1  # Test for access operators `::`.
     lapply(x, g) + 1  # Test for capturing function call "g"'s closure as a argument of lapply.
-    l$field <- 3  # Test for access operators `$`.
-    res <- defUse + l$field  # Test for def-use chain of "defUse".
+    l$field[1,1] <- 3  # Test for access operators `$`.
+    res <- defUse + l$field[1,]  # Test for def-use chain of "defUse", and "" symbol.
     f(res)  # Test for recursive calls.
   }
   newF <- cleanClosure(f)
