@@ -8,6 +8,15 @@
 # List of object ids to be removed
 .toRemoveJobjs <- new.env(parent = emptyenv())
 
+# Check if jobj was created with the current SparkContext
+isValidJobj <- function(jobj) {
+  if (exists(".scStartTime", envir = .sparkREnv)) {
+    jobj$appId == get(".scStartTime", envir = .sparkREnv)
+  } else {
+    FALSE
+  }
+}
+
 getJobj <- function(objId) {
   newObj <- jobj(objId)
   if (exists(objId, .validJobjs)) {
@@ -27,6 +36,8 @@ jobj <- function(objId) {
   # finalizers for environments or external references pointers.
   obj <- structure(new.env(parent = emptyenv()), class = "jobj")
   obj$id <- objId
+  obj$appId <- get(".scStartTime", envir = .sparkREnv)
+
   # Register a finalizer to remove the Java object when this reference
   # is garbage collected in R
   reg.finalizer(obj, cleanup.jobj)

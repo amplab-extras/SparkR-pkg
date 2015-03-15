@@ -36,7 +36,12 @@ sparkR.stop <- function(env = .sparkREnv) {
     # Also close the connection and remove it from our env
     conn <- get(".sparkRCon", envir = env)
     close(conn)
+    # Clear all broadcast variables we have
+    # as the jobj will not be valid if we restart the JVM
+    clearBroadcastVariables()
+
     rm(".sparkRCon", envir = env)
+    rm(".scStartTime", envir = env)
   }
 
   if (exists(".monitorConn", envir = env)) {
@@ -178,6 +183,10 @@ sparkR.init <- function(
 
   nonEmptyJars <- Filter(function(x) { x != "" }, jars)
   localJarPaths <- sapply(nonEmptyJars, function(j) { utils::URLencode(paste("file:", uriSep, j, sep = "")) })
+
+  # Set the start time to identify jobjs
+  # Seconds resolution is good enough for this purpose, so use ints
+  assign(".scStartTime", as.integer(Sys.time()), envir = .sparkREnv)
 
   assign(
     ".sparkRjsc",
