@@ -27,9 +27,16 @@ writeObject <- function(con, object, writeType = TRUE) {
          numeric = writeDouble(con, object),
          raw = writeRaw(con, object),
          list = writeList(con, object),
-         jobj = writeString(con, object$id),
+         jobj = writeJobj(con, object),
          environment = writeEnv(con, object),
          stop("Unsupported type for serialization"))
+}
+
+writeJobj <- function(con, value) {
+  if (!isValidJobj(value)) {
+    stop("invalid jobj ", value$id)
+  }
+  writeString(con, value$id)
 }
 
 writeString <- function(con, value) {
