@@ -36,9 +36,6 @@ sparkR.stop <- function(env = .sparkREnv) {
     # Also close the connection and remove it from our env
     conn <- get(".sparkRCon", envir = env)
     close(conn)
-    # Clear all broadcast variables we have
-    # as the jobj will not be valid if we restart the JVM
-    clearBroadcastVariables()
 
     rm(".sparkRCon", envir = env)
     rm(".scStartTime", envir = env)
@@ -49,6 +46,13 @@ sparkR.stop <- function(env = .sparkREnv) {
     close(conn)
     rm(".monitorConn", envir = env)
   }
+
+  # Clear all broadcast variables we have
+  # as the jobj will not be valid if we restart the JVM
+  clearBroadcastVariables()
+
+  # Clear jobj maps
+  clearJobjs()
 }
 
 #' Initialize a new Spark Context.
