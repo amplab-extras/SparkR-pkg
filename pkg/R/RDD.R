@@ -729,12 +729,15 @@ setMethod("take",
 #'
 #' Return the first element of an RDD
 #'
+#' @return The first element of an RDD.
 #' @examples
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
 #' first(rdd)
 #' }
+#' @rdname first
+#' @aliases first,RDD
 setMethod("first",
           signature(x = "RDD"),
           function(x) {
