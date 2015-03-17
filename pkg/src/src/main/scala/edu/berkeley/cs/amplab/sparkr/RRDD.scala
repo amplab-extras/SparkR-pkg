@@ -142,8 +142,6 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
               dataOut.write(elemArr, 0, elemArr.length)
             } else {
               // write string(for StringRRDD)
-              val str = elem.asInstanceOf[String]
-              // logWarning("@stdthread: " + elem)
               printOut.println(elem)
             }
           }
