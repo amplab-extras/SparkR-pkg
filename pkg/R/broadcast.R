@@ -34,10 +34,6 @@ Broadcast <- function(id, value, jBroadcastRef, objName) {
 #'
 #' @param bcast The broadcast variable to get
 #' @rdname broadcast
-#' @export
-setGeneric("value", function(bcast) { standardGeneric("value") })
-
-#' @rdname broadcast
 #' @aliases value,Broadcast-method
 setMethod("value",
           signature(bcast = "Broadcast"),
@@ -63,4 +59,11 @@ setMethod("value",
 setBroadcastValue <- function(bcastId, value) {
   bcastIdStr <- as.character(bcastId)
   .broadcastValues[[bcastIdStr]] <- value
+}
+
+#' Helper function to clear the list of broadcast variables we know about
+#' Should be called when the SparkR JVM backend is shutdown
+clearBroadcastVariables <- function() {
+  bcasts <- ls(.broadcastNames)
+  rm(list = bcasts, envir = .broadcastNames)
 }

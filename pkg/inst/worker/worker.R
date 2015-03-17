@@ -17,18 +17,16 @@ SpecialLengths <- list(END_OF_STERAM = 0L, TIMING_DATA = -1L)
 bootTime <- currentTimeSecs()
 bootElap <- elapsedSecs()
 
-port <- as.integer(Sys.getenv("SPARKR_WORKER_PORT"))
-
-inputCon <- socketConnection(port = port, blocking = TRUE, open = "rb")
-outputCon <- socketConnection(port = port, blocking = TRUE, open = "wb")
-
+rLibDir <- Sys.getenv("SPARKR_RLIBDIR")
 # Set libPaths to include SparkR package as loadNamespace needs this
 # TODO: Figure out if we can avoid this by not loading any objects that require
 # SparkR namespace
-rLibDir <- readLines(inputCon, n = 1)
 .libPaths(c(rLibDir, .libPaths()))
-
 suppressPackageStartupMessages(library(SparkR))
+
+port <- as.integer(Sys.getenv("SPARKR_WORKER_PORT"))
+inputCon <- socketConnection(port = port, blocking = TRUE, open = "rb")
+outputCon <- socketConnection(port = port, blocking = TRUE, open = "wb")
 
 # read the index of the current partition inside the RDD
 splitIndex <- SparkR:::readInt(inputCon)

@@ -1,7 +1,7 @@
 package edu.berkeley.cs.amplab.sparkr
 
 import java.io._
-import java.net.{ServerSocket}
+import java.net.ServerSocket
 import java.util.{Map => JMap}
 
 import scala.collection.JavaConversions._
@@ -9,11 +9,10 @@ import scala.io.Source
 import scala.reflect.ClassTag
 import scala.util.Try
 
-import org.apache.spark.{SparkEnv, Partition, SparkException, TaskContext, SparkConf}
-import org.apache.spark.api.java.{JavaSparkContext, JavaRDD, JavaPairRDD}
+import org.apache.spark.api.java.{JavaPairRDD, JavaRDD, JavaSparkContext}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
-
+import org.apache.spark.{Partition, SparkConf, SparkEnv, SparkException, TaskContext}
 
 private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     parent: RDD[T],
@@ -41,10 +40,9 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     val serverSocket = new ServerSocket(0, 2)
     val listenPort = serverSocket.getLocalPort()
 
-    val pb = rWorkerProcessBuilder(listenPort)
-    pb.redirectErrorStream(true)  // redirect stderr into stdout
-    val proc = pb.start()
-    val errThread =  startStdoutThread(proc)
+    // The stdout/stderr is shared by multiple tasks, because we use one daemon
+    // to launch child process as worker.
+    val errThread = RRDD.createRWorker(rLibDir, listenPort)
 
     // We use two sockets to separate input and output, then it's easy to manage
     // the lifecycle of them to avoid deadlock.
@@ -59,7 +57,6 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     val outSocket = serverSocket.accept()
     val inputStream = new BufferedInputStream(outSocket.getInputStream)
     dataStream = new DataInputStream(inputStream)
-
     serverSocket.close()
 
     try {
@@ -90,34 +87,6 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
   }
 
   /**
-   * ProcessBuilder used to launch worker R processes.
-   */
-  private def rWorkerProcessBuilder(port: Int) = {
-    val rCommand = "Rscript"
-    val rOptions = "--vanilla"
-    val rExecScript = rLibDir + "/SparkR/worker/worker.R"
-    val pb = new ProcessBuilder(List(rCommand, rOptions, rExecScript))
-    // Unset the R_TESTS environment variable for workers.
-    // This is set by R CMD check as startup.Rs
-    // (http://svn.r-project.org/R/trunk/src/library/tools/R/testing.R)
-    // and confuses worker script which tries to load a non-existent file
-    pb.environment().put("R_TESTS", "")
-    pb.environment().put("SPARKR_WORKER_PORT", port.toString)
-    pb
-  }
-
-  /**
-   * Start a thread to print the process's stderr to ours
-   */
-  private def startStdoutThread(proc: Process): BufferedStreamThread = {
-    val BUFFER_SIZE = 100
-    val thread = new BufferedStreamThread(proc.getInputStream, "stdout reader for R", BUFFER_SIZE)
-    thread.setDaemon(true)
-    thread.start()
-    thread
-  }
-
-  /**
    * Start a thread to write RDD data to the R process.
    */
   private def startStdinThread[T](
@@ -133,9 +102,6 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
       override def run() {
         try {
           SparkEnv.set(env)
-          val printOut = new PrintStream(stream)
-          printOut.println(rLibDir)
-
           val dataOut = new DataOutputStream(stream)
           dataOut.writeInt(splitIndex)
 
@@ -168,6 +134,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
             dataOut.writeInt(1)
           }
 
+          val printOut = new PrintStream(stream)
           for (elem <- iter) {
             if (parentSerialized) {
               val elemArr = elem.asInstanceOf[Array[Byte]]
@@ -333,7 +300,7 @@ private class Logger extends Serializable {
   }
 }
 
-private class BufferedStreamThread(
+private[sparkr] class BufferedStreamThread(
     in: InputStream,
     name: String,
     errBufferSize: Int) extends Thread(name) {
@@ -341,14 +308,16 @@ private class BufferedStreamThread(
   var lineIdx = 0
   override def run() {
     for (line <- Source.fromInputStream(in).getLines) {
-      lines(lineIdx) = line
-      lineIdx = (lineIdx + 1) % errBufferSize
+      synchronized {
+        lines(lineIdx) = line
+        lineIdx = (lineIdx + 1) % errBufferSize
+      }
       // TODO: user logger
       System.err.println(line)
     }
   }
 
-  def getLines(): String = {
+  def getLines(): String = synchronized {
     (0 until errBufferSize).filter { x =>
       lines((x + lineIdx) % errBufferSize) != null
     }.map { x =>
@@ -358,6 +327,13 @@ private class BufferedStreamThread(
 }
 
 object RRDD {
+  // Because forking processes from Java is expensive, we prefer to launch
+  // a single R daemon (daemon.R) and tell it to fork new workers for our tasks.
+  // This daemon currently only works on UNIX-based systems now, so we should
+  // also fall back to launching workers (worker.R) directly.
+  val inWindows = System.getProperty("os.name").startsWith("Windows")
+  private[this] var errThread: BufferedStreamThread = _
+  private[this] var daemonChannel: DataOutputStream = _
 
   def createSparkContext(
       master: String,
@@ -386,7 +362,74 @@ object RRDD {
     for ((name, value) <- sparkExecutorEnvMap) {
       sparkConf.setExecutorEnv(name.asInstanceOf[String], value.asInstanceOf[String])
     }
+
     new JavaSparkContext(sparkConf)
+  }
+
+  /**
+   * Start a thread to print the process's stderr to ours
+   */
+  private def startStdoutThread(proc: Process): BufferedStreamThread = {
+    val BUFFER_SIZE = 100
+    val thread = new BufferedStreamThread(proc.getInputStream, "stdout reader for R", BUFFER_SIZE)
+    thread.setDaemon(true)
+    thread.start()
+    thread
+  }
+
+  def createRProcess(rLibDir: String, port: Int, script: String) = {
+    val rCommand = "Rscript"
+    val rOptions = "--vanilla"
+    val rExecScript = rLibDir + "/SparkR/worker/" + script
+    val pb = new ProcessBuilder(List(rCommand, rOptions, rExecScript))
+    // Unset the R_TESTS environment variable for workers.
+    // This is set by R CMD check as startup.Rs
+    // (http://svn.r-project.org/R/trunk/src/library/tools/R/testing.R)
+    // and confuses worker script which tries to load a non-existent file
+    pb.environment().put("R_TESTS", "")
+    pb.environment().put("SPARKR_RLIBDIR", rLibDir)
+    pb.environment().put("SPARKR_WORKER_PORT", port.toString)
+    pb.redirectErrorStream(true)  // redirect stderr into stdout
+    val proc = pb.start()
+    val errThread = startStdoutThread(proc)
+    errThread
+  }
+
+  /**
+   * ProcessBuilder used to launch worker R processes.
+   */
+  def createRWorker(rLibDir: String, port: Int) = {
+    val useDaemon = SparkEnv.get.conf.getBoolean("spark.sparkr.use.daemon", true)
+    if (!inWindows && useDaemon) {
+      synchronized {
+        if (daemonChannel == null) {
+          // we expect one connections
+          val serverSocket = new ServerSocket(0, 1)
+          val daemonPort = serverSocket.getLocalPort
+          errThread = createRProcess(rLibDir, daemonPort, "daemon.R")
+          // the socket used to send out the input of task
+          serverSocket.setSoTimeout(10000)
+          val sock = serverSocket.accept()
+          daemonChannel = new DataOutputStream(new BufferedOutputStream(sock.getOutputStream))
+          serverSocket.close()
+        }
+        try {
+          daemonChannel.writeInt(port)
+          daemonChannel.flush()
+        } catch {
+          case e: IOException =>
+            // daemon process died
+            daemonChannel.close()
+            daemonChannel = null
+            errThread = null
+            // fail the current task, retry by scheduler
+            throw e
+        }
+        errThread
+      }
+    } else {
+      createRProcess(rLibDir, port, "worker.R")
+    }
   }
 
   /**

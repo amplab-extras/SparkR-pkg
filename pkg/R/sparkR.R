@@ -24,19 +24,6 @@ connExists <- function(env) {
 # Also terminates the backend this R session is connected to
 sparkR.stop <- function(env = .sparkREnv) {
 
-  if (!connExists(env)) {
-    # When the workspace is saved in R, the connections are closed
-    # *before* the finalizer is run. In these cases, we reconnect
-    # to the backend, so we can shut it down.
-    tryCatch({
-      connectBackend("localhost", .sparkREnv$sparkRBackendPort)
-    }, error = function(err) {
-      cat("Error in Connection: Use sparkR.init() to restart SparkR\n")
-    }, warning = function(war) {
-      cat("No Connection Found: Use sparkR.init() to restart SparkR\n")
-    })
-  } 
-
   if (exists(".sparkRCon", envir = env)) {
     cat("Stopping SparkR\n")
     if (exists(".sparkRjsc", envir = env)) {
@@ -47,14 +34,25 @@ sparkR.stop <- function(env = .sparkREnv) {
   
     callJStatic("SparkRHandler", "stopBackend")
     # Also close the connection and remove it from our env
-    conn <- get(".sparkRCon", env)
+    conn <- get(".sparkRCon", envir = env)
     close(conn)
+
     rm(".sparkRCon", envir = env)
-    # Finally, sleep for 1 sec to let backend finish exiting.
-    # Without this we get port conflicts in RStudio when we try to 'Restart R'.
-    Sys.sleep(1)
+    rm(".scStartTime", envir = env)
   }
-  
+
+  if (exists(".monitorConn", envir = env)) {
+    conn <- get(".monitorConn", envir = env)
+    close(conn)
+    rm(".monitorConn", envir = env)
+  }
+
+  # Clear all broadcast variables we have
+  # as the jobj will not be valid if we restart the JVM
+  clearBroadcastVariables()
+
+  # Clear jobj maps
+  clearJobjs()
 }
 
 #' Initialize a new Spark Context.
@@ -149,11 +147,14 @@ sparkR.init <- function(
     }
     f <- file(path, open='rb')
     sparkRBackendPort <- readInt(f)
+    monitorPort <- readInt(f)
     close(f)
     file.remove(path)
-    if (length(sparkRBackendPort) == 0) {
+    if (length(sparkRBackendPort) == 0 || sparkRBackendPort == 0 ||
+        length(monitorPort) == 0 || monitorPort == 0) {
       stop("JVM failed to launch")
     }
+    assign(".monitorConn", socketConnection(port = monitorPort), envir = .sparkREnv)
   }
 
   .sparkREnv$sparkRBackendPort <- sparkRBackendPort
@@ -187,6 +188,10 @@ sparkR.init <- function(
   nonEmptyJars <- Filter(function(x) { x != "" }, jars)
   localJarPaths <- sapply(nonEmptyJars, function(j) { utils::URLencode(paste("file:", uriSep, j, sep = "")) })
 
+  # Set the start time to identify jobjs
+  # Seconds resolution is good enough for this purpose, so use ints
+  assign(".scStartTime", as.integer(Sys.time()), envir = .sparkREnv)
+
   assign(
     ".sparkRjsc",
     callJStatic(
@@ -203,8 +208,8 @@ sparkR.init <- function(
 
   sc <- get(".sparkRjsc", envir = .sparkREnv)
 
-  # Register a finalizer to stop backend on R exit
-  reg.finalizer(.sparkREnv, sparkR.stop, onexit = TRUE)
+  # Register a finalizer to sleep 1 seconds on R exit to make RStudio happy
+  reg.finalizer(.sparkREnv, function(x) { Sys.sleep(1) }, onexit = TRUE)
 
   sc
 }

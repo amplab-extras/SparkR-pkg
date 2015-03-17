@@ -62,7 +62,9 @@ exportMethods(
               "unionRDD",
               "unpersist",
               "value",
-              "values"
+              "values",
+              "zipWithIndex",
+              "zipWithUniqueId"
              )
 
 # S3 methods exported
