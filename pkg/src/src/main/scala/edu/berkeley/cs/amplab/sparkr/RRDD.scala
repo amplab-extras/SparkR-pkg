@@ -25,7 +25,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     broadcastVars: Array[Broadcast[Object]])
   extends RDD[U](parent) {
   protected var dataStream: DataInputStream = _
-  val logger: Logger = new Logger
+  val logger: TimeLogger = new TimeLogger
   override def getPartitions = parent.partitions
 
   override def compute(split: Partition, context: TaskContext): Iterator[U] = {
@@ -278,7 +278,7 @@ private object SpecialLengths {
   val TIMING_DATA   = -1
 }
 
-private class Logger extends Serializable {
+private class TimeLogger extends Serializable {
   var boot: Double = _
   var init: Double = _
   var broadcast: Double = _
