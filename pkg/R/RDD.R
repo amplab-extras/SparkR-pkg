@@ -10,6 +10,7 @@ setOldClass("jobj")
 #'
 #' @slot env An R environment that stores bookkeeping states of the RDD
 #' @slot jrdd Java object reference to the backing JavaRDD
+#' to an RDD
 #' @export
 setClass("RDD",
          slots = list(env = "environment",
@@ -21,9 +22,15 @@ setClass("PipelinedRDD",
                       prev_jrdd = "jobj"),
          contains = "RDD")
 
-
-setMethod("initialize", "RDD", function(.Object, jrdd, serialized,
+setMethod("initialize", "RDD", function(.Object, jrdd, serializedMode,
                                         isCached, isCheckpointed) {
+  # Check that RDD constructor is using the correct version of serializedMode
+  stopifnot(class(serializedMode) == "character")
+  stopifnot(serializedMode %in% c("byte", "string"))
+  # RDD has two serialization types:
+  # byte: The RDD stores data serialized in R.
+  # string: The RDD stores data as strings.
+  
   # We use an environment to store mutable states inside an RDD object.
   # Note that R's call-by-value semantics makes modifying slots inside an
   # object (passed as an argument into a function, such as cache()) difficult:
@@ -35,7 +42,7 @@ setMethod("initialize", "RDD", function(.Object, jrdd, serialized,
   .Object@env <- new.env()
   .Object@env$isCached <- isCached
   .Object@env$isCheckpointed <- isCheckpointed
-  .Object@env$serialized <- serialized
+  .Object@env$serializedMode <- serializedMode
 
   .Object@jrdd <- jrdd
   .Object
@@ -46,11 +53,11 @@ setMethod("initialize", "PipelinedRDD", function(.Object, prev, func, jrdd_val) 
   .Object@env$isCached <- FALSE
   .Object@env$isCheckpointed <- FALSE
   .Object@env$jrdd_val <- jrdd_val
-   # This tracks if jrdd_val is serialized
-  .Object@env$serialized <- prev@env$serialized
+  if (!is.null(jrdd_val)) {
+    # This tracks the serialization mode for jrdd_val
+    .Object@env$serializedMode <- prev@env$serializedMode
+  }
 
-  # NOTE: We use prev_serialized to track if prev_jrdd is serialized
-  # prev_serialized is used during the delayed computation of JRDD in getJRDD
   .Object@prev <- prev
 
   isPipelinable <- function(rdd) {
@@ -62,44 +69,57 @@ setMethod("initialize", "PipelinedRDD", function(.Object, prev, func, jrdd_val) 
     # This transformation is the first in its stage:
     .Object@func <- func
     .Object@prev_jrdd <- getJRDD(prev)
-    # Since this is the first step in the pipeline, the prev_serialized
-    # is same as serialized here.
-    .Object@env$prev_serialized <- .Object@env$serialized
+    .Object@env$prev_serializedMode <- prev@env$serializedMode
+    # NOTE: We use prev_serializedMode to track the serialization mode of prev_JRDD
+    # prev_serializedMode is used during the delayed computation of JRDD in getJRDD
   } else {
     pipelinedFunc <- function(split, iterator) {
       func(split, prev@func(split, iterator))
     }
     .Object@func <- pipelinedFunc
     .Object@prev_jrdd <- prev@prev_jrdd # maintain the pipeline
-    # Get if the prev_jrdd was serialized from the parent RDD
-    .Object@env$prev_serialized <- prev@env$prev_serialized
+    # Get the serialization mode of the parent RDD
+    .Object@env$prev_serializedMode <- prev@env$prev_serializedMode
   }
 
   .Object
 })
 
-
 #' @rdname RDD
 #' @export
 #'
 #' @param jrdd Java object reference to the backing JavaRDD
-#' @param serialized TRUE if the RDD stores data serialized in R
+#' @param serializedMode Use "byte" if the RDD stores data serialized in R, "string" if the RDD
+#'                       stores strings
 #' @param isCached TRUE if the RDD is cached
 #' @param isCheckpointed TRUE if the RDD has been checkpointed
-RDD <- function(jrdd, serialized = TRUE, isCached = FALSE,
+RDD <- function(jrdd, serializedMode = "byte", isCached = FALSE,
                 isCheckpointed = FALSE) {
-  new("RDD", jrdd, serialized, isCached, isCheckpointed)
+  new("RDD", jrdd, serializedMode, isCached, isCheckpointed)
 }
 
 PipelinedRDD <- function(prev, func) {
   new("PipelinedRDD", prev, func, NULL)
 }
 
+# For normal RDDs we can directly read the serializedMode
+setMethod("getSerializedMode", signature(rdd = "RDD"), function(rdd) rdd@env$serializedMode )
+# For pipelined RDDs if jrdd_val is set then serializedMode should exist
+# if not we return the defaultSerialization mode of "byte" as we don't know the serialization
+# mode at this point in time.
+setMethod("getSerializedMode", signature(rdd = "PipelinedRDD"),
+          function(rdd) {
+            if (!is.null(rdd@env$jrdd_val)) {
+              return(rdd@env$serializedMode)
+            } else {
+              return("byte")
+            }
+          })
 
 # The jrdd accessor function.
 setMethod("getJRDD", signature(rdd = "RDD"), function(rdd) rdd@jrdd )
 setMethod("getJRDD", signature(rdd = "PipelinedRDD"),
-          function(rdd, dataSerialization = TRUE) {
+          function(rdd, serializedMode = "byte") {
             if (!is.null(rdd@env$jrdd_val)) {
               return(rdd@env$jrdd_val)
             }
@@ -118,31 +138,31 @@ setMethod("getJRDD", signature(rdd = "PipelinedRDD"),
 
             prev_jrdd <- rdd@prev_jrdd
 
-            if (dataSerialization) {
-              rddRef <- newJObject("edu.berkeley.cs.amplab.sparkr.RRDD",
+            if (serializedMode == "string") {
+              rddRef <- newJObject("edu.berkeley.cs.amplab.sparkr.StringRRDD",
                                    callJMethod(prev_jrdd, "rdd"),
-                                   rdd@env$prev_serialized,
                                    serializedFuncArr,
+                                   rdd@env$prev_serializedMode,
                                    packageNamesArr,
                                    as.character(.sparkREnv[["libname"]]),
                                    broadcastArr,
                                    callJMethod(prev_jrdd, "classTag"))
             } else {
-              rddRef <- newJObject("edu.berkeley.cs.amplab.sparkr.StringRRDD",
+              rddRef <- newJObject("edu.berkeley.cs.amplab.sparkr.RRDD",
                                    callJMethod(prev_jrdd, "rdd"),
-                                   rdd@env$prev_serialized,
                                    serializedFuncArr,
+                                   rdd@env$prev_serializedMode,
+                                   serializedMode,
                                    packageNamesArr,
                                    as.character(.sparkREnv[["libname"]]),
                                    broadcastArr,
                                    callJMethod(prev_jrdd, "classTag"))
             }
             # Save the serialization flag after we create a RRDD
-            rdd@env$serialized <- dataSerialization
+            rdd@env$serializedMode <- serializedMode
             rdd@env$jrdd_val <- callJMethod(rddRef, "asJavaRDD") # rddRef$asJavaRDD()
             rdd@env$jrdd_val
           })
-
 
 setValidity("RDD",
             function(object) {
@@ -198,32 +218,8 @@ setMethod("cache",
 #' @aliases persist,RDD-method
 setMethod("persist",
           signature(x = "RDD", newLevel = "character"),
-          function(x, newLevel = c("DISK_ONLY",
-                                     "DISK_ONLY_2",
-                                     "MEMORY_AND_DISK",
-                                     "MEMORY_AND_DISK_2",
-                                     "MEMORY_AND_DISK_SER",
-                                     "MEMORY_AND_DISK_SER_2",
-                                     "MEMORY_ONLY",
-                                     "MEMORY_ONLY_2",
-                                     "MEMORY_ONLY_SER",
-                                     "MEMORY_ONLY_SER_2",
-                                     "OFF_HEAP")) {
-            match.arg(newLevel)
-            storageLevel <- switch(newLevel,
-              "DISK_ONLY" = callJStatic("org.apache.spark.storage.StorageLevel", "DISK_ONLY"),
-              "DISK_ONLY_2" = callJStatic("org.apache.spark.storage.StorageLevel", "DISK_ONLY_2"),
-              "MEMORY_AND_DISK" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_AND_DISK"),
-              "MEMORY_AND_DISK_2" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_AND_DISK_2"),
-              "MEMORY_AND_DISK_SER" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_AND_DISK_SER"),
-              "MEMORY_AND_DISK_SER_2" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_AND_DISK_SER_2"),
-              "MEMORY_ONLY" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_ONLY"),
-              "MEMORY_ONLY_2" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_ONLY_2"),
-              "MEMORY_ONLY_SER" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_ONLY_SER"),
-              "MEMORY_ONLY_SER_2" = callJStatic("org.apache.spark.storage.StorageLevel", "MEMORY_ONLY_SER_2"),
-              "OFF_HEAP" = callJStatic("org.apache.spark.storage.StorageLevel", "OFF_HEAP"))
-            
-            callJMethod(getJRDD(x), "persist", storageLevel)
+          function(x, newLevel) {
+            callJMethod(getJRDD(x), "persist", getStorageLevel(newLevel))
             x@env$isCached <- TRUE
             x
           })
@@ -321,7 +317,8 @@ setMethod("collect",
           function(x, flatten = TRUE) {
             # Assumes a pairwise RDD is backed by a JavaPairRDD.
             collected <- callJMethod(getJRDD(x), "collect")
-            convertJListToRList(collected, flatten)
+            convertJListToRList(collected, flatten,
+              serializedMode = getSerializedMode(x))
           })
 
 #' @description
@@ -338,7 +335,8 @@ setMethod("collectPartition",
                                            as.list(as.integer(partitionId)))
 
             jList <- jPartitionsList[[1]]
-            convertJListToRList(jList, flatten = TRUE)
+            convertJListToRList(jList, flatten = TRUE,
+              serializedMode = getSerializedMode(x))
           })
 
 #' @description
@@ -720,11 +718,27 @@ setMethod("take",
               elems <- convertJListToRList(partition,
                                            flatten = TRUE,
                                            logicalUpperBound = size,
-                                           serialized = x@env$serialized)
+                                           serializedMode = getSerializedMode(x))
               # TODO: Check if this append is O(n^2)?
               resList <- append(resList, elems)
             }
             resList
+          })
+
+#' First
+#'
+#' Return the first element of an RDD
+#'
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' rdd <- parallelize(sc, 1:10)
+#' first(rdd)
+#' }
+setMethod("first",
+          signature(x = "RDD"),
+          function(x) {
+            take(x, 1)[[1]]
           })
 
 #' Removes the duplicates from RDD.
@@ -939,10 +953,7 @@ setMethod("repartition",
 setMethod("coalesce",
            signature(x = "RDD", numPartitions = "numeric"),
            function(x, numPartitions, shuffle = FALSE) {
-             if (as.integer(numPartitions) != numPartitions) {
-               warning("Number of partitions should be an integer. Coercing it to integer.")
-             }
-             numPartitions <- as.integer(numPartitions)
+             numPartitions <- numToInt(numPartitions)
              if (shuffle || numPartitions > SparkR::numPartitions(x)) {
                func <- function(s, part) {
                  set.seed(s)  # split as seed
@@ -978,10 +989,10 @@ setMethod("coalesce",
 setMethod("saveAsObjectFile",
           signature(x = "RDD", path = "character"),
           function(x, path) {
-            # If the RDD is in string format, need to serialize it before saving it because when
-            # objectFile() is invoked to load the saved file, only serialized format is assumed.
-            if (!x@env$serialized) {
-              x <- reserialize(x)
+            # If serializedMode == "string" we need to serialize the data before saving it since
+            # objectFile() assumes serializedMode == "byte".
+            if (getSerializedMode(x) != "byte") {
+              x <- serializeToBytes(x)
             }
             # Return nothing
             invisible(callJMethod(getJRDD(x), "saveAsObjectFile", path))
@@ -1008,7 +1019,7 @@ setMethod("saveAsTextFile",
             stringRdd <- lapply(x, func)
             # Return nothing
             invisible(
-              callJMethod(getJRDD(stringRdd, dataSerialization = FALSE), "saveAsTextFile", path))
+              callJMethod(getJRDD(stringRdd, serializedMode = "string"), "saveAsTextFile", path))
           })
 
 #' Sort an RDD by the given key function.
@@ -1326,7 +1337,6 @@ setMethod("zipWithIndex",
 
 ############ Binary Functions #############
 
-
 #' Return the union RDD of two RDDs.
 #' The same as union() in Spark.
 #'
@@ -1345,18 +1355,15 @@ setMethod("zipWithIndex",
 setMethod("unionRDD",
           signature(x = "RDD", y = "RDD"),
           function(x, y) {
-            if (x@env$serialized == y@env$serialized) {
+            if (getSerializedMode(x) == getSerializedMode(y)) {
               jrdd <- callJMethod(getJRDD(x), "union", getJRDD(y))
-              union.rdd <- RDD(jrdd, x@env$serialized)
+              union.rdd <- RDD(jrdd, getSerializedMode(x))
             } else {
               # One of the RDDs is not serialized, we need to serialize it first.
-              if (!x@env$serialized) {
-                x <- reserialize(x)
-              } else {
-                y <- reserialize(y)
-              }
+              if (getSerializedMode(x) != "byte") x <- serializeToBytes(x)
+              if (getSerializedMode(y) != "byte") y <- serializeToBytes(y)
               jrdd <- callJMethod(getJRDD(x), "union", getJRDD(y))
-              union.rdd <- RDD(jrdd, TRUE)
+              union.rdd <- RDD(jrdd, "byte")
             }
             union.rdd
           })

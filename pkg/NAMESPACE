@@ -18,6 +18,7 @@ exportMethods(
               "distinct",
               "Filter",
               "filterRDD",
+              "first",
               "flatMap",
               "flatMapValues",
               "fold",

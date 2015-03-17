@@ -14,11 +14,8 @@ outputCon <- socketConnection(port = port, blocking = TRUE, open = "wb")
 # read the index of the current partition inside the RDD
 splitIndex <- SparkR:::readInt(inputCon)
 
-# read the isInputSerialized bit flag
-isInputSerialized <- SparkR:::readInt(inputCon)
-
-# read the isOutputSerialized bit flag
-isOutputSerialized <- SparkR:::readInt(inputCon)
+deserializer <- SparkR:::readString(inputCon)
+serializer <- SparkR:::readString(inputCon)
 
 # Include packages as required
 packageNames <- unserialize(SparkR:::readRaw(inputCon))
@@ -51,23 +48,23 @@ isEmpty <- SparkR:::readInt(inputCon)
 if (isEmpty != 0) {
 
   if (numPartitions == -1) {
-    if (isInputSerialized) {
+    if (deserializer == "byte") {
       # Now read as many characters as described in funcLen
       data <- SparkR:::readDeserialize(inputCon)
-    } else {
+    } else if (deserializer == "string") {
       data <- readLines(inputCon)
     }
     output <- computeFunc(splitIndex, data)
-    if (isOutputSerialized) {
+    if (serializer == "byte") {
       SparkR:::writeRawSerialize(outputCon, output)
     } else {
       SparkR:::writeStrings(outputCon, output)
     }
   } else {
-    if (isInputSerialized) {
+    if (deserializer == "byte") {
       # Now read as many characters as described in funcLen
       data <- SparkR:::readDeserialize(inputCon)
-    } else {
+    } else if (deserializer == "string") {
       data <- readLines(inputCon)
     }
 
@@ -100,7 +97,7 @@ if (isEmpty != 0) {
 }
 
 # End of output
-if (isOutputSerialized) {
+if (serializer %in% c("byte")) {
   SparkR:::writeInt(outputCon, 0L)
 }
 
