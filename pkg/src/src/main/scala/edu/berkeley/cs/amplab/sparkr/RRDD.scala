@@ -32,7 +32,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
   override def compute(split: Partition, context: TaskContext): Iterator[U] = {
 
     // Timing start
-    logger.startTime = System.currentTimeMillis
+    logger.boot = System.currentTimeMillis / 1000
 
     // The parent may be also an RRDD, so we should launch it first.
     val parentIterator = firstParent[T].iterator(split, context)
@@ -202,13 +202,12 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
       length match {
         case SpecialLengths.TIMING_DATA =>
           // Timing data from R worker
-          logger.bootTime = dataStream.readDouble().toLong
-          logger.initTime = dataStream.readDouble().toLong
-          logger.broadcastTime = dataStream.readDouble().toLong
-          logger.inputTime = dataStream.readDouble().toLong
-          logger.computeTime = dataStream.readDouble().toLong
-          logger.outputTime = dataStream.readDouble().toLong
-          logger.finishTime = dataStream.readDouble().toLong
+          logger.boot = dataStream.readDouble - logger.boot
+          logger.init = dataStream.readDouble
+          logger.broadcast = dataStream.readDouble
+          logger.input = dataStream.readDouble
+          logger.compute = dataStream.readDouble
+          logger.output = dataStream.readDouble
           logInfo(logger.reportTime)
           read()
         case length if length >= 0 =>
@@ -313,26 +312,24 @@ private object SpecialLengths {
 }
 
 private class Logger extends Serializable {
-  var startTime: Long = _
-  var bootTime: Long = _
-  var initTime: Long = _
-  var broadcastTime: Long = _
-  var inputTime: Long = _
-  var computeTime: Long = _
-  var outputTime: Long = _
-  var finishTime: Long = _
+  var boot: Double = _
+  var init: Double = _
+  var broadcast: Double = _
+  var input: Double = _
+  var compute: Double = _
+  var output: Double = _
 
   def reportTime: String = {
-    ("Times: boot = %s ms, init = %s ms, broadcast = %s ms, " +
-      "read-input = %s ms, compute = %s ms, write-output = %s ms, " +
-      "total = %s ms").format(
-        bootTime - startTime,
-        initTime - bootTime,
-        broadcastTime - initTime,
-        inputTime - broadcastTime,
-        computeTime - inputTime,
-        outputTime - computeTime,
-        finishTime - startTime)
+    ("Times: boot = %.1f s, init = %.1f s, broadcast = %.1f s, " +
+      "read-input = %.1f s, compute = %.1f s, write-output = %.1f s, " +
+      "total = %.1f s").format(
+        boot,
+        init,
+        broadcast,
+        input,
+        compute,
+        output,
+        boot + init + broadcast + input + compute + output)
   }
 }
 
