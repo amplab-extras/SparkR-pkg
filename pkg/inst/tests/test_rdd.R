@@ -426,7 +426,17 @@ test_that("zipRDD() on RDDs", {
   actual <- collect(zipRDD(rdd, rdd))
   expected <- lapply(mockFile, function(x) { list(x ,x) })
   expect_equal(actual, expected)
-    
+
+  rdd1 <- parallelize(sc, 0:1)
+  actual <- collect(zipRDD(rdd1, rdd))
+  expected <- lapply(0:1, function(x) { list(x, mockFile[x + 1]) })
+  expect_equal(actual, expected)
+
+  rdd1 <- map(rdd, function(x) { x })
+  actual <- collect(zipRDD(rdd, rdd1))
+  expected <- lapply(mockFile, function(x) { list(x, x) })
+  expect_equal(actual, expected)
+ 
   unlink(fileName)
 })
 
