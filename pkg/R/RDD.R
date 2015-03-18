@@ -1336,6 +1336,16 @@ setMethod("zipWithIndex",
            lapplyPartitionsWithIndex(x, partitionFunc)
          })
 
+setMethod("glom",
+          signature(x = "RDD"),
+          function(x) {
+            partitionFunc <- function(part) {
+              list(part)
+            }
+            
+            lapplyPartition(x, partitionFunc)
+          }
+
 ############ Binary Functions #############
 
 #' Return the union RDD of two RDDs.
