@@ -27,8 +27,7 @@ RDD can be created using functions like
 \describe{
 \item{\code{env}}{An R environment that stores bookkeeping states of the RDD}
 
-\item{\code{jrdd}}{Java object reference to the backing JavaRDD
-to an RDD}
+\item{\code{jrdd}}{Java object reference to the backing JavaRDD}
 }}
 \seealso{
 parallelize, textFile
