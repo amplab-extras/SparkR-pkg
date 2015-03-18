@@ -1,9 +1,9 @@
 package edu.berkeley.cs.amplab.sparkr
 
-import scala.collection.JavaConversions._
+import java.io.{DataInputStream, DataOutputStream}
+import java.sql.{Date, Time}
 
-import java.io.DataInputStream
-import java.io.DataOutputStream
+import scala.collection.JavaConversions._
 
 /**
  * Utility functions to serialize, deserialize objects to / from R
@@ -12,11 +12,14 @@ object SerDe {
 
   // Type mapping from R to Java
   //
+  // NULL -> void
   // integer -> Int
   // character -> String
   // logical -> Boolean
   // double, numeric -> Double
   // raw -> Array[Byte]
+  // Date -> Date
+  // POSIXlt/POSIXct -> Time
   //
   // list[T] -> Array[T], where T is one of above mentioned types
   // environment -> Map[String, T], where T is a native type
@@ -35,6 +38,7 @@ object SerDe {
       dis: DataInputStream,
       dataType: Char): Object = {
     dataType match {
+      case 'n' => null
       case 'i' => new java.lang.Integer(readInt(dis))
       case 'd' => new java.lang.Double(readDouble(dis))
       case 'b' => new java.lang.Boolean(readBoolean(dis))
@@ -42,6 +46,8 @@ object SerDe {
       case 'e' => readMap(dis)
       case 'r' => readBytes(dis)
       case 'l' => readList(dis)
+      case 'D' => readDate(dis)
+      case 't' => readTime(dis)
       case 'j' => JVMObjectTracker.getObject(readString(dis))
       case _ => throw new IllegalArgumentException(s"Invalid type $dataType")
     }
@@ -50,8 +56,7 @@ object SerDe {
   def readBytes(in: DataInputStream) = {
     val len = readInt(in)
     val out = new Array[Byte](len)
-    val bytesRead = in.read(out, 0, len)
-    assert(len == bytesRead)
+    val bytesRead = in.readFully(out)
     out
   }
 
@@ -66,7 +71,7 @@ object SerDe {
   def readString(in: DataInputStream) = {
     val len = in.readInt()
     val asciiBytes = new Array[Byte](len)
-    in.read(asciiBytes, 0, len)
+    in.readFully(asciiBytes)
     assert(asciiBytes(len - 1) == 0)
     val str = new String(asciiBytes.dropRight(1).map(_.toChar))
     str
@@ -75,6 +80,16 @@ object SerDe {
   def readBoolean(in: DataInputStream) = {
     val intVal = in.readInt()
     if (intVal == 0) false else true
+  }
+
+  def readDate(in: DataInputStream) = {
+    val d = in.readInt()
+    new Date(d.toLong * 24 * 3600 * 1000)
+  }
+
+  def readTime(in: DataInputStream) = {
+    val t = in.readDouble()
+    new Time((t * 1000L).toLong)
   }
 
   def readBytesArr(in: DataInputStream) = {
@@ -142,6 +157,8 @@ object SerDe {
   // Double -> double
   // Long -> double
   // Array[Byte] -> raw
+  // Date -> Date
+  // Time -> POSIXct
   //
   // Array[T] -> list()
   // Object -> jobj
@@ -153,6 +170,8 @@ object SerDe {
       case "double" => dos.writeByte('d')
       case "integer" => dos.writeByte('i')
       case "logical" => dos.writeByte('b')
+      case "date" => dos.writeByte('D')
+      case "time" => dos.writeByte('t')
       case "raw" => dos.writeByte('r')
       case "list" => dos.writeByte('l')
       case "jobj" => dos.writeByte('j')
@@ -180,6 +199,12 @@ object SerDe {
         case "boolean" | "java.lang.Boolean" =>
           writeType(dos, "logical")
           writeBoolean(dos, value.asInstanceOf[Boolean])
+        case "java.sql.Date" =>
+          writeType(dos, "date")
+          writeDate(dos, value.asInstanceOf[Date])
+        case "java.sql.Time" =>
+          writeType(dos, "time")
+          writeTime(dos, value.asInstanceOf[Time])
         case "[B" =>
           writeType(dos, "raw")
           writeBytes(dos, value.asInstanceOf[Array[Byte]])
@@ -234,6 +259,15 @@ object SerDe {
     out.writeInt(intValue)
   }
 
+  def writeDate(out: DataOutputStream, value: Date) {
+    out.writeInt((value.getTime / 1000 / 3600 / 24).toInt)
+  }
+
+  def writeTime(out: DataOutputStream, value: Time) {
+    out.writeDouble(value.getTime.toDouble / 1000.0)
+  }
+
+
   // NOTE: Only works for ASCII right now
   def writeString(out: DataOutputStream, value: String) {
     val len = value.length
@@ -281,4 +315,9 @@ object SerDe {
     out.writeInt(value.length)
     value.foreach(v => writeBytes(out, v))
   }
+}
+
+object SerializationFormats {
+  val BYTE = "byte"
+  val STRING = "string"
 }

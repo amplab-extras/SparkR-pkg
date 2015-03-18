@@ -2,7 +2,6 @@
 
 ############ Actions and Transformations ############
 
-
 #' Look up elements of a key in an RDD
 #'
 #' @description
@@ -147,7 +146,6 @@ setMethod("flatMapValues",
 
 ############ Shuffle Functions ############
 
-
 #' Partition an RDD by key
 #'
 #' This function operates on RDDs where every element is of the form list(K, V) or c(K, V).
@@ -195,8 +193,8 @@ setMethod("partitionBy",
             pairwiseRRDD <- newJObject("edu.berkeley.cs.amplab.sparkr.PairwiseRRDD",
                                        callJMethod(jrdd, "rdd"),
                                        as.integer(numPartitions),
-                                       x@env$serialized,
                                        serializedHashFuncBytes,
+                                       getSerializedMode(x),
                                        packageNamesArr,
                                        as.character(.sparkREnv$libname),
                                        broadcastArr,
@@ -214,7 +212,7 @@ setMethod("partitionBy",
             # shuffled acutal content key-val pairs.
             r <- callJMethod(javaPairRDD, "values")
 
-            RDD(r, serialized = TRUE)
+            RDD(r, serializedMode = "byte")
           })
 
 #' Group values by key
@@ -504,7 +502,6 @@ setMethod("foldByKey",
           })
 
 ############ Binary Functions #############
-
 
 #' Join two RDDs
 #'

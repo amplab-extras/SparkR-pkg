@@ -5,12 +5,14 @@
 \alias{RDD-class}
 \title{S4 class that represents an RDD}
 \usage{
-RDD(jrdd, serialized = TRUE, isCached = FALSE, isCheckpointed = FALSE)
+RDD(jrdd, serializedMode = "byte", isCached = FALSE,
+  isCheckpointed = FALSE)
 }
 \arguments{
 \item{jrdd}{Java object reference to the backing JavaRDD}
 
-\item{serialized}{TRUE if the RDD stores data serialized in R}
+\item{serializedMode}{Use "byte" if the RDD stores data serialized in R, "string" if the RDD
+stores strings}
 
 \item{isCached}{TRUE if the RDD is cached}
 

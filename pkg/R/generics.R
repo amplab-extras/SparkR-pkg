@@ -1,5 +1,8 @@
 ############ RDD Actions and Transformations ############
 
+# Return the serialization mode for an RDD.
+setGeneric("getSerializedMode", function(rdd) { standardGeneric("getSerializedMode") })
+
 # The jrdd accessor function.
 setGeneric("getJRDD", function(rdd, ...) { standardGeneric("getJRDD") })
 
@@ -106,6 +109,10 @@ setGeneric("foreachPartition",
 #' @rdname take
 #' @export
 setGeneric("take", function(x, num) { standardGeneric("take") })
+
+#' @rdname first
+#' @export
+setGeneric("first", function(x) { standardGeneric("first") })
 
 #' @rdname distinct
 #' @export
