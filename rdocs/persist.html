@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>R: Persist an RDD</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="R.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/languages/r.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head><body>
+
+<table width="100%" summary="page for persist {SparkR}"><tr><td>persist {SparkR}</td><td align="right">R Documentation</td></tr></table>
+
+<h2>Persist an RDD</h2>
+
+<h3>Description</h3>
+
+<p>Persist this RDD with the specified storage level. For details of the
+supported storage levels, refer to
+http://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+persist(rdd, newLevel)
+
+## S4 method for signature 'RDD,character'
+persist(rdd, newLevel = c("DISK_ONLY",
+  "DISK_ONLY_2", "MEMORY_AND_DISK", "MEMORY_AND_DISK_2", "MEMORY_AND_DISK_SER",
+  "MEMORY_AND_DISK_SER_2", "MEMORY_ONLY", "MEMORY_ONLY_2", "MEMORY_ONLY_SER",
+  "MEMORY_ONLY_SER_2", "OFF_HEAP"))
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>rdd</code></td>
+<td>
+<p>The RDD to persist</p>
+</td></tr>
+<tr valign="top"><td><code>newLevel</code></td>
+<td>
+<p>The new storage level to be assigned</p>
+</td></tr>
+</table>
+
+
+<h3>Examples</h3>
+
+<pre><code class="r">## Not run: 
+##D sc &lt;- sparkR.init()
+##D rdd &lt;- parallelize(sc, 1:10, 2L)
+##D persist(rdd, &quot;MEMORY_AND_DISK&quot;)
+## End(Not run)
+</code></pre>
+
+
+<hr><div align="center">[Package <em>SparkR</em> version 0.1 <a href="00Index.html">Index</a>]</div>
+</body></html>

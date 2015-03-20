@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>R: Zip an RDD with generated unique Long IDs.</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="R.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/languages/r.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head><body>
+
+<table width="100%" summary="page for zipWithUniqueId {SparkR}"><tr><td>zipWithUniqueId {SparkR}</td><td align="right">R Documentation</td></tr></table>
+
+<h2>Zip an RDD with generated unique Long IDs.</h2>
+
+<h3>Description</h3>
+
+<p>Items in the kth partition will get ids k, n+k, 2*n+k, ..., where
+n is the number of partitions. So there may exist gaps, but this
+method won't trigger a spark job, which is different from
+zipWithIndex.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+zipWithUniqueId(x)
+
+## S4 method for signature 'RDD'
+zipWithUniqueId(x)
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>x</code></td>
+<td>
+<p>An RDD to be zipped.</p>
+</td></tr>
+</table>
+
+
+<h3>Value</h3>
+
+<p>An RDD with zipped items.
+</p>
+
+
+<h3>See Also</h3>
+
+<p>zipWithIndex
+</p>
+
+
+<h3>Examples</h3>
+
+<pre><code class="r">## Not run: 
+##D sc &lt;- sparkR.init()
+##D rdd &lt;- parallelize(sc, list(&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;), 3L)
+##D collect(zipWithUniqueId(rdd))
+##D # list(list(&quot;a&quot;, 0), list(&quot;b&quot;, 3), list(&quot;c&quot;, 1), list(&quot;d&quot;, 4), list(&quot;e&quot;, 2))
+## End(Not run)
+</code></pre>
+
+
+<hr><div align="center">[Package <em>SparkR</em> version 0.1 <a href="00Index.html">Index</a>]</div>
+</body></html>

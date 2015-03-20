@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>R: Take elements from an RDD.</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="R.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/languages/r.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head><body>
+
+<table width="100%" summary="page for take {SparkR}"><tr><td>take {SparkR}</td><td align="right">R Documentation</td></tr></table>
+
+<h2>Take elements from an RDD.</h2>
+
+<h3>Description</h3>
+
+<p>This function takes the first NUM elements in the RDD and
+returns them in a list.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+take(rdd, num)
+
+## S4 method for signature 'RDD,numeric'
+take(rdd, num)
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>rdd</code></td>
+<td>
+<p>The RDD to take elements from</p>
+</td></tr>
+<tr valign="top"><td><code>num</code></td>
+<td>
+<p>Number of elements to take</p>
+</td></tr>
+</table>
+
+
+<h3>Examples</h3>
+
+<pre><code class="r">## Not run: 
+##D sc &lt;- sparkR.init()
+##D rdd &lt;- parallelize(sc, 1:10)
+##D take(rdd, 2L) # list(1, 2)
+## End(Not run)
+</code></pre>
+
+
+<hr><div align="center">[Package <em>SparkR</em> version 0.1 <a href="00Index.html">Index</a>]</div>
+</body></html>

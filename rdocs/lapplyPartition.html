@@ -1,0 +1,71 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>R: Apply a function to each partition of an RDD</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="R.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.3/languages/r.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head><body>
+
+<table width="100%" summary="page for lapplyPartition {SparkR}"><tr><td>lapplyPartition {SparkR}</td><td align="right">R Documentation</td></tr></table>
+
+<h2>Apply a function to each partition of an RDD</h2>
+
+<h3>Description</h3>
+
+<p>Return a new RDD by applying a function to each partition of this RDD.
+</p>
+<p>mapPartitions is the same as lapplyPartition.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+lapplyPartition(X, FUN)
+
+## S4 method for signature 'RDD,'function''
+lapplyPartition(X, FUN)
+
+mapPartitions(X, FUN)
+
+## S4 method for signature 'RDD,'function''
+mapPartitions(X, FUN)
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>X</code></td>
+<td>
+<p>The RDD to apply the transformation.</p>
+</td></tr>
+<tr valign="top"><td><code>FUN</code></td>
+<td>
+<p>the transformation to apply on each partition.</p>
+</td></tr>
+</table>
+
+
+<h3>Value</h3>
+
+<p>a new RDD created by the transformation.
+</p>
+
+
+<h3>Examples</h3>
+
+<pre><code class="r">## Not run: 
+##D sc &lt;- sparkR.init()
+##D rdd &lt;- parallelize(sc, 1:10)
+##D partitionSum &lt;- lapplyPartition(rdd, function(part) { Reduce(&quot;+&quot;, part) })
+##D collect(partitionSum) # 15, 40
+## End(Not run)
+</code></pre>
+
+
+<hr><div align="center">[Package <em>SparkR</em> version 0.1 <a href="00Index.html">Index</a>]</div>
+</body></html>
