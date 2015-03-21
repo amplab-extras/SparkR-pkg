@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>R Documentation of SparkR</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+
+
+
+
+<style type="text/css">
+* {
+	font-family: "Trebuchet MS", "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Arial, sans-serif;
+	font-size: 14px;
+}
+body {
+  padding: 0 5px; 
+  margin: 0 auto; 
+  width: 80%;
+  max-width: 60em; /* 960px */
+}
+
+h1, h2, h3, h4, h5, h6 {
+	color: #666;
+}
+h1, h2 {
+	text-align: center;
+}
+h1 {
+	font-size: x-large;
+}
+h2, h3 {
+	font-size: large;
+}
+h4, h6 {
+	font-style: italic;
+}
+h3 {
+	border-left: solid 5px #ddd;
+	padding-left: 5px;
+	font-variant: small-caps;
+}
+
+p img {
+	display: block;
+	margin: auto;
+}
+
+span, code, pre {
+	font-family: Monaco, "Lucida Console", "Courier New", Courier, monospace;
+}
+span.acronym {}
+span.env {
+	font-style: italic;
+}
+span.file {}
+span.option {}
+span.pkg {
+	font-weight: bold;
+}
+span.samp{}
+
+dt, p code {
+	background-color: #F7F7F7;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+<h1>SparkR</h1>
+
+<ul>
+<li><a href="RDD.html" target="content">RDD</a></li>
+<li><a href="aggregateByKey.html" target="content">aggregateByKey</a></li>
+<li><a href="aggregateRDD.html" target="content">aggregateRDD</a></li>
+<li><a href="broadcast-class.html" target="content">broadcast-class</a></li>
+<li><a href="broadcast-internal.html" target="content">broadcast-internal</a></li>
+<li><a href="broadcast.html" target="content">broadcast</a></li>
+<li><a href="cache-methods.html" target="content">cache-methods</a></li>
+<li><a href="checkpoint-methods.html" target="content">checkpoint-methods</a></li>
+<li><a href="coalesce.html" target="content">coalesce</a></li>
+<li><a href="cogroup.html" target="content">cogroup</a></li>
+<li><a href="collect-methods.html" target="content">collect-methods</a></li>
+<li><a href="combineByKey.html" target="content">combineByKey</a></li>
+<li><a href="count.html" target="content">count</a></li>
+<li><a href="countByKey.html" target="content">countByKey</a></li>
+<li><a href="countByValue.html" target="content">countByValue</a></li>
+<li><a href="distinct.html" target="content">distinct</a></li>
+<li><a href="filterRDD.html" target="content">filterRDD</a></li>
+<li><a href="first.html" target="content">first</a></li>
+<li><a href="flatMap.html" target="content">flatMap</a></li>
+<li><a href="flatMapValues.html" target="content">flatMapValues</a></li>
+<li><a href="fold.html" target="content">fold</a></li>
+<li><a href="foldByKey.html" target="content">foldByKey</a></li>
+<li><a href="foreach.html" target="content">foreach</a></li>
+<li><a href="glom.html" target="content">glom</a></li>
+<li><a href="groupByKey.html" target="content">groupByKey</a></li>
+<li><a href="hashCode.html" target="content">hashCode</a></li>
+<li><a href="includePackage.html" target="content">includePackage</a></li>
+<li><a href="join-methods.html" target="content">join-methods</a></li>
+<li><a href="keyBy.html" target="content">keyBy</a></li>
+<li><a href="keys.html" target="content">keys</a></li>
+<li><a href="lapply.html" target="content">lapply</a></li>
+<li><a href="lapplyPartition.html" target="content">lapplyPartition</a></li>
+<li><a href="lapplyPartitionsWithIndex.html" target="content">lapplyPartitionsWithIndex</a></li>
+<li><a href="lookup.html" target="content">lookup</a></li>
+<li><a href="mapValues.html" target="content">mapValues</a></li>
+<li><a href="maximum.html" target="content">maximum</a></li>
+<li><a href="minimum.html" target="content">minimum</a></li>
+<li><a href="name.html" target="content">name</a></li>
+<li><a href="numPartitions.html" target="content">numPartitions</a></li>
+<li><a href="objectFile.html" target="content">objectFile</a></li>
+<li><a href="parallelize.html" target="content">parallelize</a></li>
+<li><a href="partitionBy.html" target="content">partitionBy</a></li>
+<li><a href="persist.html" target="content">persist</a></li>
+<li><a href="pipeRDD.html" target="content">pipeRDD</a></li>
+<li><a href="print.jobj.html" target="content">print.jobj</a></li>
+<li><a href="reduce.html" target="content">reduce</a></li>
+<li><a href="reduceByKey.html" target="content">reduceByKey</a></li>
+<li><a href="reduceByKeyLocally.html" target="content">reduceByKeyLocally</a></li>
+<li><a href="repartition.html" target="content">repartition</a></li>
+<li><a href="sampleRDD.html" target="content">sampleRDD</a></li>
+<li><a href="saveAsObjectFile.html" target="content">saveAsObjectFile</a></li>
+<li><a href="saveAsTextFile.html" target="content">saveAsTextFile</a></li>
+<li><a href="setCheckpointDir.html" target="content">setCheckpointDir</a></li>
+<li><a href="setName.html" target="content">setName</a></li>
+<li><a href="sortBy.html" target="content">sortBy</a></li>
+<li><a href="sortByKey.html" target="content">sortByKey</a></li>
+<li><a href="sparkR.init.html" target="content">sparkR.init</a></li>
+<li><a href="take.html" target="content">take</a></li>
+<li><a href="takeOrdered.html" target="content">takeOrdered</a></li>
+<li><a href="takeSample.html" target="content">takeSample</a></li>
+<li><a href="textFile.html" target="content">textFile</a></li>
+<li><a href="top.html" target="content">top</a></li>
+<li><a href="unionRDD.html" target="content">unionRDD</a></li>
+<li><a href="unpersist-methods.html" target="content">unpersist-methods</a></li>
+<li><a href="values.html" target="content">values</a></li>
+<li><a href="zipRDD.html" target="content">zipRDD</a></li>
+<li><a href="zipWithIndex.html" target="content">zipWithIndex</a></li>
+<li><a href="zipWithUniqueId.html" target="content">zipWithUniqueId</a></li>
+</ul>
+
+<p>Generated with <a href="http://yihui.name/knitr">knitr</a>  1.9</p>
+
+</body>
+
+</html>
