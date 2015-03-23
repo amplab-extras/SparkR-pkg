@@ -15,6 +15,12 @@ test_that("get number of partitions in RDD", {
   expect_equal(numPartitions(intRdd), 2)
 })
 
+test_that("first on RDD", {
+  expect_true(first(rdd) == 1)
+  newrdd <- lapply(rdd, function(x) x + 1)
+  expect_true(first(newrdd) == 2)  
+})
+
 test_that("count and length on RDD", {
    expect_equal(count(rdd), 10)
    expect_equal(length(rdd), 10)
@@ -376,6 +382,12 @@ test_that("zipWithIndex() on RDDs", {
   expect_equal(actual, expected)
 })
 
+test_that("glom() on RDD", {
+  rdd <- parallelize(sc, as.list(1:4), 2L)
+  actual <- collect(glom(rdd))
+  expect_equal(actual, list(list(1, 2), list(3, 4)))
+})
+
 test_that("keys() on RDDs", {
   keys <- keys(intRdd)
   actual <- collect(keys)
@@ -403,6 +415,35 @@ test_that("pipeRDD() on RDDs", {
   actual <- collect(pipeRDD(rev.rdd, "sort"))
   expected <- as.list(as.character(c(5:9, 0:4)))
   expect_equal(actual, expected)
+})
+
+test_that("zipRDD() on RDDs", {
+  rdd1 <- parallelize(sc, 0:4)
+  rdd2 <- parallelize(sc, 1000:1004)
+  actual <- collect(zipRDD(rdd1, rdd2))
+  expect_equal(actual,
+               list(list(0, 1000), list(1, 1001), list(2, 1002), list(3, 1003), list(4, 1004)))
+  
+  mockFile = c("Spark is pretty.", "Spark is awesome.")
+  fileName <- tempfile(pattern="spark-test", fileext=".tmp")
+  writeLines(mockFile, fileName)
+  
+  rdd <- textFile(sc, fileName)
+  actual <- collect(zipRDD(rdd, rdd))
+  expected <- lapply(mockFile, function(x) { list(x ,x) })
+  expect_equal(actual, expected)
+
+  rdd1 <- parallelize(sc, 0:1)
+  actual <- collect(zipRDD(rdd1, rdd))
+  expected <- lapply(0:1, function(x) { list(x, mockFile[x + 1]) })
+  expect_equal(actual, expected)
+
+  rdd1 <- map(rdd, function(x) { x })
+  actual <- collect(zipRDD(rdd, rdd1))
+  expected <- lapply(mockFile, function(x) { list(x, x) })
+  expect_equal(actual, expected)
+ 
+  unlink(fileName)
 })
 
 test_that("join() on pairwise RDDs", {

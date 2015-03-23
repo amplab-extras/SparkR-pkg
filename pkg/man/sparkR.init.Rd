@@ -3,10 +3,9 @@
 \alias{sparkR.init}
 \title{Initialize a new Spark Context.}
 \usage{
-sparkR.init(master = "local", appName = "SparkR",
+sparkR.init(master = "", appName = "SparkR",
   sparkHome = Sys.getenv("SPARK_HOME"), sparkEnvir = list(),
-  sparkExecutorEnv = list(), sparkJars = "", sparkRLibDir = "",
-  sparkRBackendPort = 12345)
+  sparkExecutorEnv = list(), sparkJars = "", sparkRLibDir = "")
 }
 \arguments{
 \item{master}{The Spark master URL.}
@@ -35,7 +34,7 @@ sc <- sparkR.init("local[2]", "SparkR", "/home/spark",
                  list(spark.executor.memory="1g"))
 sc <- sparkR.init("yarn-client", "SparkR", "/home/spark",
                  list(spark.executor.memory="1g"),
-                 list(LD_LIBRARY_PATH="/directory of Java VM Library Files (libjvm.so) on worker nodes/"),
+                 list(LD_LIBRARY_PATH="/directory of JVM libraries (libjvm.so) on workers/"),
                  c("jarfile1.jar","jarfile2.jar"))
 }
 }

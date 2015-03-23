@@ -1,11 +1,8 @@
 package edu.berkeley.cs.amplab.sparkr
 
 import java.io._
-import java.net.URI
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Semaphore, TimeUnit}
 
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 
 import org.apache.hadoop.fs.Path

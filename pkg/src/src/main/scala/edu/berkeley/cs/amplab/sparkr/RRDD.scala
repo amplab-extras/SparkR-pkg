@@ -19,9 +19,9 @@ import edu.berkeley.cs.amplab.sparkr.SerDe._
 private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     parent: RDD[T],
     numPartitions: Int,
-    parentSerialized: Boolean,
-    dataSerialized: Boolean,
     func: Array[Byte],
+    deserializer: String,
+    serializer: String,
     packageNames: Array[Byte],
     rLibDir: String,
     broadcastVars: Array[Broadcast[Object]])
@@ -107,16 +107,14 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
           val dataOut = new DataOutputStream(stream)
           dataOut.writeInt(splitIndex)
 
-          // R worker process input serialization flag
-          dataOut.writeInt(if (parentSerialized) 1 else 0)
-          // R worker process output serialization flag
-          dataOut.writeInt(if (dataSerialized) 1 else 0)
+          SerDe.writeString(dataOut, deserializer)
+          SerDe.writeString(dataOut, serializer)
 
           dataOut.writeInt(packageNames.length)
-          dataOut.write(packageNames, 0, packageNames.length)
+          dataOut.write(packageNames)
 
           dataOut.writeInt(func.length)
-          dataOut.write(func, 0, func.length)
+          dataOut.write(func)
 
           dataOut.writeInt(broadcastVars.length)
           broadcastVars.foreach { broadcast =>
@@ -125,7 +123,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
             // TODO: Pass a byte array from R to avoid this cast ?
             val broadcastByteArr = broadcast.value.asInstanceOf[Array[Byte]]
             dataOut.writeInt(broadcastByteArr.length)
-            dataOut.write(broadcastByteArr, 0, broadcastByteArr.length)
+            dataOut.write(broadcastByteArr)
           }
 
           dataOut.writeInt(numPartitions)
@@ -137,14 +135,25 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
           }
 
           val printOut = new PrintStream(stream)
-          for (elem <- iter) {
-            if (parentSerialized) {
+
+          def writeElem(elem: Any): Unit = {
+            if (deserializer == SerializationFormats.BYTE) {
               val elemArr = elem.asInstanceOf[Array[Byte]]
               dataOut.writeInt(elemArr.length)
-              dataOut.write(elemArr, 0, elemArr.length)
-            } else {
+              dataOut.write(elemArr)
+            } else if (deserializer == SerializationFormats.STRING) {
               // write string(for StringRRDD)
               printOut.println(elem)
+            }
+          }
+
+          for (elem <- iter) {
+            elem match {
+              case (key, value) =>
+                writeElem(key)
+                writeElem(value)
+              case _ =>
+                writeElem(elem)
             }
           }
           stream.flush()
@@ -188,19 +197,19 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
 }
 
 /**
- * Form an RDD[Int, Array[Byte])] from key-value pairs returned from R.
+ * Form an RDD[(Int, Array[Byte])] from key-value pairs returned from R.
  * This is used by SparkR's shuffle operations.
  */
 private class PairwiseRRDD[T: ClassTag](
     parent: RDD[T],
     numPartitions: Int,
-    parentSerialized: Boolean,
     hashFunc: Array[Byte],
+    deserializer: String,
     packageNames: Array[Byte],
     rLibDir: String,
     broadcastVars: Array[Object])
-  extends BaseRRDD[T, (Int, Array[Byte])](parent, numPartitions, parentSerialized,
-                                          true, hashFunc, packageNames, rLibDir,
+  extends BaseRRDD[T, (Int, Array[Byte])](parent, numPartitions, hashFunc, deserializer,
+                                          SerializationFormats.BYTE, packageNames, rLibDir,
                                           broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
 
   override protected def readData(length: Int): (Int, Array[Byte]) = {
@@ -209,7 +218,7 @@ private class PairwiseRRDD[T: ClassTag](
         val hashedKey = dataStream.readInt()
         val contentPairsLength = dataStream.readInt()
         val contentPairs = new Array[Byte](contentPairsLength)
-        dataStream.read(contentPairs, 0, contentPairsLength)
+        dataStream.readFully(contentPairs)
         (hashedKey, contentPairs)
       case _ => null
     }
@@ -223,14 +232,15 @@ private class PairwiseRRDD[T: ClassTag](
  */
 private class RRDD[T: ClassTag](
     parent: RDD[T],
-    parentSerialized: Boolean,
     func: Array[Byte],
+    deserializer: String,
+    serializer: String,
     packageNames: Array[Byte],
     rLibDir: String,
     broadcastVars: Array[Object])
-  extends BaseRRDD[T, Array[Byte]](parent, -1, parentSerialized,
-                                true, func, packageNames, rLibDir,
-                                broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
+  extends BaseRRDD[T, Array[Byte]](parent, -1, func, deserializer,
+                                   serializer, packageNames, rLibDir,
+                                   broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
 
   override protected def readData(length: Int): Array[Byte] = {
     length match {
@@ -250,14 +260,14 @@ private class RRDD[T: ClassTag](
  */
 private class StringRRDD[T: ClassTag](
     parent: RDD[T],
-    parentSerialized: Boolean,
     func: Array[Byte],
+    deserializer: String,
     packageNames: Array[Byte],
     rLibDir: String,
     broadcastVars: Array[Object])
-  extends BaseRRDD[T, String](parent, -1, parentSerialized,
-                           false, func, packageNames, rLibDir,
-                           broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
+  extends BaseRRDD[T, String](parent, -1, func, deserializer, SerializationFormats.STRING,
+                              packageNames, rLibDir,
+                              broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
 
   override protected def readData(length: Int): String = {
     length match {
@@ -374,7 +384,7 @@ object RRDD {
     thread
   }
 
-  def createRProcess(rLibDir: String, port: Int, script: String) = {
+  private def createRProcess(rLibDir: String, port: Int, script: String) = {
     val rCommand = "Rscript"
     val rOptions = "--vanilla"
     val rExecScript = rLibDir + "/SparkR/worker/" + script
@@ -395,7 +405,7 @@ object RRDD {
   /**
    * ProcessBuilder used to launch worker R processes.
    */
-  def createRWorker(rLibDir: String, port: Int) = {
+  def createRWorker(rLibDir: String, port: Int): BufferedStreamThread = {
     val useDaemon = SparkEnv.get.conf.getBoolean("spark.sparkr.use.daemon", true)
     if (!inWindows && useDaemon) {
       synchronized {

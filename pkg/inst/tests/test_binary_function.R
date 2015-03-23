@@ -21,8 +21,14 @@ test_that("union on two RDDs", {
   union.rdd <- unionRDD(rdd, text.rdd)
   actual <- collect(union.rdd)
   expect_equal(actual, c(as.list(nums), mockFile))
-  expect_true(union.rdd@env$serialized)
-  
+  expect_true(getSerializedMode(union.rdd) == "byte")
+
+  rdd<- map(text.rdd, function(x) {x})
+  union.rdd <- unionRDD(rdd, text.rdd)
+  actual <- collect(union.rdd)
+  expect_equal(actual, as.list(c(mockFile, mockFile)))
+  expect_true(getSerializedMode(union.rdd) == "byte")
+
   unlink(fileName)
 })
 

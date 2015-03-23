@@ -31,11 +31,8 @@ outputCon <- socketConnection(port = port, blocking = TRUE, open = "wb")
 # read the index of the current partition inside the RDD
 splitIndex <- SparkR:::readInt(inputCon)
 
-# read the isInputSerialized bit flag
-isInputSerialized <- SparkR:::readInt(inputCon)
-
-# read the isOutputSerialized bit flag
-isOutputSerialized <- SparkR:::readInt(inputCon)
+deserializer <- SparkR:::readString(inputCon)
+serializer <- SparkR:::readString(inputCon)
 
 # Include packages as required
 packageNames <- unserialize(SparkR:::readRaw(inputCon))
@@ -74,11 +71,11 @@ isEmpty <- SparkR:::readInt(inputCon)
 if (isEmpty != 0) {
 
   if (numPartitions == -1) {
-    if (isInputSerialized) {
+    if (deserializer == "byte") {
       # Now read as many characters as described in funcLen
       data <- SparkR:::readDeserialize(inputCon)
-    } else {
-      data <- readLines(inputCon)
+    } else if (deserializer == "string") {
+      data <- as.list(readLines(inputCon))
     }
     # Timing reading input data for execution
     inputElap <- elapsedSecs()
@@ -87,7 +84,7 @@ if (isEmpty != 0) {
     # Timing computing
     computeElap <- elapsedSecs()
 
-    if (isOutputSerialized) {
+    if (serializer == "byte") {
       SparkR:::writeRawSerialize(outputCon, output)
     } else {
       # write lines one-by-one with flag
@@ -96,10 +93,10 @@ if (isEmpty != 0) {
     # Timing output
     outputElap <- elapsedSecs()
   } else {
-    if (isInputSerialized) {
+    if (deserializer == "byte") {
       # Now read as many characters as described in funcLen
       data <- SparkR:::readDeserialize(inputCon)
-    } else {
+    } else if (deserializer == "string") {
       data <- readLines(inputCon)
     }
     # Timing reading input data for execution

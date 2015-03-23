@@ -9,6 +9,8 @@
 # Double -> double
 # Long -> double
 # Array[Byte] -> raw
+# Date -> Date
+# Time -> POSIXct
 #
 # Array[T] -> list()
 # Object -> jobj
@@ -26,10 +28,12 @@ readTypedObject <- function(con, type) {
     "b" = readBoolean(con),
     "d" = readDouble(con),
     "r" = readRaw(con),
+    "D" = readDate(con),
+    "t" = readTime(con),
     "l" = readList(con),
     "n" = NULL,
     "j" = getJobj(readString(con)),
-    stop("Unsupported type for deserialization"))
+    stop(paste("Unsupported type for deserialization", type)))
 }
 
 readString <- function(con) {
@@ -52,6 +56,15 @@ readBoolean <- function(con) {
 
 readType <- function(con) {
   rawToChar(readBin(con, "raw", n = 1L))
+}
+
+readDate <- function(con) {
+  as.Date(readInt(con), origin = "1970-01-01")
+}
+
+readTime <- function(con) {
+  t <- readDouble(con)
+  as.POSIXct(t, origin = "1970-01-01")
 }
 
 # We only support lists where all elements are of same type
