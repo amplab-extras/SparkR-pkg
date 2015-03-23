@@ -14,6 +14,8 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkConf, SparkEnv, SparkException, TaskContext}
 
+import edu.berkeley.cs.amplab.sparkr.SerDe._
+
 private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     parent: RDD[T],
     numPartitions: Int,
@@ -260,10 +262,7 @@ private class StringRRDD[T: ClassTag](
   override protected def readData(length: Int): String = {
     length match {
       case length if length > 0 =>
-        val asciiBytes = new Array[Byte](length)
-        dataStream.read(asciiBytes, 0, length)
-        val str = new String(asciiBytes.dropRight(1).map(_.toChar))
-        str
+        readStringBytes(dataStream, length)
       case _ => null
     }
   }

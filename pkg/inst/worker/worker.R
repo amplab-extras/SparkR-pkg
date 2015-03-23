@@ -90,11 +90,8 @@ if (isEmpty != 0) {
     if (isOutputSerialized) {
       SparkR:::writeRawSerialize(outputCon, output)
     } else {
-      lapply(output,
-             function(line) {
-               # write lines one-by-one with flag
-               SparkR:::writeString(outputCon, line)
-             })
+      # write lines one-by-one with flag
+      lapply(output, function(line) SparkR:::writeString(outputCon, line))
     }
     # Timing output
     outputElap <- elapsedSecs()
