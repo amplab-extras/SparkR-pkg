@@ -11,7 +11,7 @@ elapsedSecs <- function() {
 }
 
 # Constants
-SpecialLengths <- list(END_OF_STERAM = 0L, TIMING_DATA = -1L)
+specialLengths <- list(END_OF_STERAM = 0L, TIMING_DATA = -1L)
 
 # Timing R process boot
 bootTime <- currentTimeSecs()
@@ -139,7 +139,7 @@ if (isEmpty != 0) {
 }
 
 # Report timing
-SparkR:::writeInt(outputCon, SpecialLengths$TIMING_DATA)
+SparkR:::writeInt(outputCon, specialLengths$TIMING_DATA)
 SparkR:::writeDouble(outputCon, bootTime)
 SparkR:::writeDouble(outputCon, initElap - bootElap)        # init
 SparkR:::writeDouble(outputCon, broadcastElap - initElap)   # broadcast
@@ -148,7 +148,7 @@ SparkR:::writeDouble(outputCon, computeElap - inputElap)    # compute
 SparkR:::writeDouble(outputCon, outputElap - computeElap)   # output
 
 # End of output
-SparkR:::writeInt(outputCon, SpecialLengths$END_OF_STERAM)
+SparkR:::writeInt(outputCon, specialLengths$END_OF_STERAM)
 
 close(outputCon)
 close(inputCon)

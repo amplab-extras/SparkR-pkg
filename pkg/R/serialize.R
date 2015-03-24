@@ -153,13 +153,11 @@ writeArgs <- function(con, args) {
 }
 
 writeStrings <- function(con, stringList) {
-  # writeLines(unlist(stringList), con)
-  strs <- unlist(stringList)
-  len <- length(strs)
+  len <- length(stringList)
 
   writeInt(len)
   if (len > 0) {
-    for (s in strs) {
+    for (s in stringList) {
       writeString(con, s)
     }
   }
