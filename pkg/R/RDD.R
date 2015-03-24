@@ -724,6 +724,7 @@ setMethod("take",
             resList
           })
 
+
 #' First
 #'
 #' Return the first element of an RDD
@@ -1062,21 +1063,49 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
     if (num < length(part)) {
       # R limitation: order works only on primitive types!
       ord <- order(unlist(part, recursive = FALSE), decreasing = !ascending)
-      list(part[ord[1:num]])
+      part[ord[1:num]]
     } else {
-      list(part)
+      part
     }
   }
 
-  reduceFunc <- function(elems, part) {
-    newElems <- append(elems, part)
-    # R limitation: order works only on primitive types!
-    ord <- order(unlist(newElems, recursive = FALSE), decreasing = !ascending)
-    newElems[ord[1:num]]
-  }
-  
   newRdd <- mapPartitions(x, partitionFunc)
-  reduce(newRdd, reduceFunc)
+
+  resList <- list()
+  index <- -1
+  jrdd <- getJRDD(newRdd)
+  numPartitions <- numPartitions(newRdd)
+
+  while (TRUE) {
+    index <- index + 1
+
+    if (index >= numPartitions)
+      break
+
+    # a JList of byte arrays
+    partitionArr <- callJMethod(jrdd, "collectPartitions", as.list(as.integer(index)))
+    partition <- partitionArr[[1]]
+
+    # elems is capped to have at most `size` elements
+    elems <- convertJListToRList(partition,
+                                 flatten = TRUE,
+                                 logicalUpperBound = NULL,
+                                 serializedMode = getSerializedMode(newRdd))
+
+    # TODO: Check if this append is O(n^2)?
+    resList <- append(resList, elems)
+
+    if (length(resList) > num) {
+      ord <- order(unlist(resList, recursive = FALSE), decreasing = !ascending)
+      resList <- resList[ord[1:num]]
+    }
+
+    if (length(resList) < num && index == numPartitions - 1) {
+      ord <- order(unlist(resList, recursive = FALSE), decreasing = !ascending)
+      resList <- resList[ord[1:length(resList)]]
+    }
+  }
+  resList
 }
 
 #' Returns the first N elements from an RDD in ascending order.
