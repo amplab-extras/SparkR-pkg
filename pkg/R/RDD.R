@@ -1079,8 +1079,11 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
   while (TRUE) {
     index <- index + 1
 
-    if (index >= numPartitions)
+    if (index >= numPartitions){
+      ord <- order(unlist(resList, recursive = FALSE), decreasing = !ascending)
+      resList <- resList[ord[1:num]]
       break
+    }
 
     # a JList of byte arrays
     partitionArr <- callJMethod(jrdd, "collectPartitions", as.list(as.integer(index)))
@@ -1094,16 +1097,6 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
 
     # TODO: Check if this append is O(n^2)?
     resList <- append(resList, elems)
-
-    if (length(resList) > num) {
-      ord <- order(unlist(resList, recursive = FALSE), decreasing = !ascending)
-      resList <- resList[ord[1:num]]
-    }
-
-    if (length(resList) < num && index == numPartitions - 1) {
-      ord <- order(unlist(resList, recursive = FALSE), decreasing = !ascending)
-      resList <- resList[ord[1:length(resList)]]
-    }
   }
   resList
 }
