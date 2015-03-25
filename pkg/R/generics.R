@@ -246,6 +246,12 @@ setGeneric("mapValues", function(X, FUN) { standardGeneric("mapValues") })
 #' @export
 setGeneric("flatMapValues", function(X, FUN) { standardGeneric("flatMapValues") })
 
+#' @rdname sampleByKey 
+#' @export
+setGeneric("sampleByKey",
+           function(x, withReplacement, fractions, seed) {
+             standardGeneric("sampleByKey")
+           })
 
 ############ Shuffle Functions ############
 

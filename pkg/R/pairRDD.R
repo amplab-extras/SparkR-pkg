@@ -769,4 +769,84 @@ setMethod("sortByKey",
             newRDD <- partitionBy(x, numPartitions, rangePartitionFunc)
             lapplyPartition(newRDD, partitionFunc)
           })
-          
+
+#' @description
+#' \code{sampleByKey} return a subset RDD of the given RDD sampled by key 
+#'
+#' @param x The RDD to sample elements by key, where each element is
+#'             list(K, V) or c(K, V). 
+#' @param withReplacement Sampling with replacement or not
+#' @param fraction The (rough) sample target fraction
+#' @param seed Randomness seed value
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' rdd <- parallelize(sc, 1:2000)
+#' makePairs <- lapply(rdd, function(x) { if(x%%2 == 0) list("a", x) else list("b", x) })
+#' fractions <- list(c("a", 0.2), c("b", 0.1))
+#' sample <- sampleByKey(makePairs, FALSE, fractions, 1618L)
+#' 100 < length(lookup(sample, "a")) && 300 > length(lookup(sample, "a")) # TRUE
+#' 50 < length(lookup(sample, "b")) && 150 > length(lookup(sample, "b")) # TRUE
+#' lookup(sample, "a")[which.min(lookup(sample, "a"))] >= 0 # TRUE
+#' lookup(sample, "a")[which.max(lookup(sample, "a"))] <= 2000 # TRUE
+#' lookup(sample, "b")[which.min(lookup(sample, "b"))] >= 0 # TRUE
+#' lookup(sample, "b")[which.max(lookup(sample, "b"))] <= 2000 # TRUE
+#'}
+#' @rdname sampleByKey
+#' @aliases sampleByKey,RDD-method
+setMethod("sampleByKey",
+          signature(x = "RDD", withReplacement = "logical",
+                    fractions = "vector", seed = "integer"),
+          function(x, withReplacement, fractions, seed) {
+            funk <- function(k) {
+              k[[1]]
+            }
+
+            funv <- function(v) {
+              v[[2]]
+            }
+
+            # The sampler: takes a partition and returns its sampled version.
+            samplingFunc <- function(split, part) {
+              set.seed(seed)
+              res <- vector("list", length(part))
+              len <- 0
+
+              fractionskey <- lapply(fractions, funk)
+              fractionsval <- lapply(fractions, funv)
+
+              # Discards some random values to ensure each partition has a
+              # different random seed.
+              runif(split)
+
+              for (elem in part) {
+                if(elem[[1]] %in% fractionskey){
+                  frac <- as.numeric(fractionsval[which(fractionskey == elem[[1]])])
+                  if (withReplacement) {
+                    count <- rpois(1, frac)
+                    if (count > 0) {
+                      res[(len + 1):(len + count)] <- rep(list(elem), count)
+                      len <- len + count
+                    }
+                  } else {
+                    if (runif(1) < frac) {
+                      len <- len + 1
+                      res[[len]] <- elem
+                    }
+                  }
+                }
+              }
+
+              # TODO(zongheng): look into the performance of the current
+              # implementation. Look into some iterator package? Note that
+              # Scala avoids many calls to creating an empty list and PySpark
+              # similarly achieves this using `yield'. (duplicated from sampleRDD)
+              if (len > 0)
+                res[1:len]
+              else
+                list()
+            }
+
+            lapplyPartitionsWithIndex(x, samplingFunc)
+          })
+

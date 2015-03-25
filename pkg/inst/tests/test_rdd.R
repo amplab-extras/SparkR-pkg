@@ -620,3 +620,29 @@ test_that("collectAsMap() on a pairwise RDD", {
   vals <- collectAsMap(rdd)
   expect_equal(vals, list(`1` = "a", `2` = "b"))
 })
+
+test_that("sampleByKey() on pairwise RDDs", {
+  rdd <- parallelize(sc, 1:2000) 
+  pairsRDD <- lapply(rdd, function(x) { if(x%%2 == 0) list("a", x) else list("b", x) })
+  fractions <- list(c("a", 0.2), c("b", 0.1))
+  sample <- sampleByKey(pairsRDD, FALSE, fractions, 1618L)
+  expect_equal(100 < length(lookup(sample, "a")) && 300 > length(lookup(sample, "a")), TRUE)
+  expect_equal(50 < length(lookup(sample, "b")) && 150 > length(lookup(sample, "b")), TRUE)
+  expect_equal(lookup(sample, "a")[which.min(lookup(sample, "a"))] >= 0, TRUE)
+  expect_equal(lookup(sample, "a")[which.max(lookup(sample, "a"))] <= 2000, TRUE)
+  expect_equal(lookup(sample, "b")[which.min(lookup(sample, "b"))] >= 0, TRUE)
+  expect_equal(lookup(sample, "b")[which.max(lookup(sample, "b"))] <= 2000, TRUE)
+
+  rdd <- parallelize(sc, 1:2000) 
+  pairsRDD <- lapply(rdd, function(x) { if(x%%2 == 0) list(2, x) else list(3, x) })
+  fractions <- list(c(2, 0.2), c(3, 0.1))
+  sample <- sampleByKey(pairsRDD, TRUE, fractions, 1618L)
+  expect_equal(100 < length(lookup(sample, 2)) && 300 > length(lookup(sample, 2)), TRUE)
+  expect_equal(50 < length(lookup(sample, 3)) && 150 > length(lookup(sample, 3)), TRUE)
+  expect_equal(lookup(sample, 2)[which.min(lookup(sample, 2))] >= 0, TRUE)
+  expect_equal(lookup(sample, 2)[which.max(lookup(sample, 2))] <= 2000, TRUE)
+  expect_equal(lookup(sample, 3)[which.min(lookup(sample, 3))] >= 0, TRUE)
+  expect_equal(lookup(sample, 3)[which.max(lookup(sample, 3))] <= 2000, TRUE)
+})
+
+
