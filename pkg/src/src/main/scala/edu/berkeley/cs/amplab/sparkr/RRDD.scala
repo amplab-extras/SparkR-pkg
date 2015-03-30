@@ -27,13 +27,13 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     broadcastVars: Array[Broadcast[Object]])
   extends RDD[U](parent) {
   protected var dataStream: DataInputStream = _
-  val logger: TimeLogger = new TimeLogger
+  private var bootTime: Double = _
   override def getPartitions = parent.partitions
 
   override def compute(split: Partition, context: TaskContext): Iterator[U] = {
 
     // Timing start
-    logger.boot = System.currentTimeMillis / 1000
+    bootTime = System.currentTimeMillis / 1000.0
 
     // The parent may be also an RRDD, so we should launch it first.
     val parentIterator = firstParent[T].iterator(split, context)
@@ -178,13 +178,23 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
       length match {
         case SpecialLengths.TIMING_DATA =>
           // Timing data from R worker
-          logger.boot = dataStream.readDouble - logger.boot
-          logger.init = dataStream.readDouble
-          logger.broadcast = dataStream.readDouble
-          logger.input = dataStream.readDouble
-          logger.compute = dataStream.readDouble
-          logger.output = dataStream.readDouble
-          logInfo(logger.reportTime)
+          val boot = dataStream.readDouble - bootTime
+          val init = dataStream.readDouble
+          val broadcast = dataStream.readDouble
+          val input = dataStream.readDouble
+          val compute = dataStream.readDouble
+          val output = dataStream.readDouble
+          logInfo(
+            ("Times: boot = %.3f s, init = %.3f s, broadcast = %.3f s, " +
+             "read-input = %.3f s, compute = %.3f s, write-output = %.3f s, " +
+             "total = %.3f s").format(
+               boot,
+               init,
+               broadcast,
+               input,
+               compute,
+               output,
+               boot + init + broadcast + input + compute + output))
           read()
         case length if length >= 0 =>
           readData(length)
@@ -281,30 +291,7 @@ private class StringRRDD[T: ClassTag](
 }
 
 private object SpecialLengths {
-  val END_OF_STREAM = 0
   val TIMING_DATA   = -1
-}
-
-private class TimeLogger extends Serializable {
-  var boot: Double = _
-  var init: Double = _
-  var broadcast: Double = _
-  var input: Double = _
-  var compute: Double = _
-  var output: Double = _
-
-  def reportTime: String = {
-    ("Times: boot = %.1f s, init = %.1f s, broadcast = %.1f s, " +
-      "read-input = %.1f s, compute = %.1f s, write-output = %.1f s, " +
-      "total = %.1f s").format(
-        boot,
-        init,
-        broadcast,
-        input,
-        compute,
-        output,
-        boot + init + broadcast + input + compute + output)
-  }
 }
 
 private[sparkr] class BufferedStreamThread(
