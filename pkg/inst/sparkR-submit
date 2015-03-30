@@ -62,7 +62,7 @@ cat > /tmp/sparkR.profile << EOF
   projecHome <- Sys.getenv("PROJECT_HOME")
   Sys.setenv(NOAWT=1)
   .libPaths(c(paste(projecHome,"/..", sep=""), .libPaths()))
-  require(SparkR)
+  library(SparkR)
   sc <- sparkR.init()
   sqlCtx <- sparkRSQL.init(sc)
   assign("sc", sc, envir=.GlobalEnv)
