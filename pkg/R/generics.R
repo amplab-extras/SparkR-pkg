@@ -222,6 +222,10 @@ setGeneric("glom", function(x) { standardGeneric("glom") })
 #' @export
 setGeneric("unionRDD", function(x, y) { standardGeneric("unionRDD") })
 
+#' @rdname cartesian
+#' @export
+setGeneric("cartesian", function(x, other) { standardGeneric("cartesian") })
+
 #' @rdname lookup
 #' @export
 setGeneric("lookup", function(x, key) { standardGeneric("lookup") })

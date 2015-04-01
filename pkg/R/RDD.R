@@ -1487,3 +1487,87 @@ setMethod("zipRDD",
             
             PipelinedRDD(zippedRDD, partitionFunc)
           })
+
+#' Cartesian product of this RDD and another one.
+#'
+#' Return the Cartesian product of this RDD and another one, 
+#' that is, the RDD of all pairs of elements (a, b) where a 
+#' is in this and b is in other.
+#' 
+#' @param x An RDD.
+#' @param other An RDD.
+#' @return A new RDD which is the Cartesian product of these two RDDs.
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' rdd <- parallelize(sc, 1:2)
+#' sortByKey(cartesian(rdd, rdd)) 
+#' # list(list(1, 1), list(1, 2), list(2, 1), list(2, 2))
+#'}
+#' @rdname cartesian
+#' @aliases cartesian,RDD,RDD-method
+setMethod("cartesian",
+          signature(x = "RDD", other = "RDD"),
+          function(x, other) {
+            if (getSerializedMode(x) != getSerializedMode(other) || 
+                  getSerializedMode(x) == "byte") {
+              # Append the number of elements in each partition to that partition so that we can later
+              # know the boundary of elements from x and other.
+              #
+              # Note that this appending also serves the purpose of reserialization, because even if 
+              # any RDD is serialized, we need to reserialize it to make sure its partitions are encoded
+              # as a single byte array. For example, partitions of an RDD generated from partitionBy()
+              # may be encoded as multiple byte arrays.          
+              appendLength <- function(part) {
+                part[[length(part) + 1]] <- length(part) + 1
+                part
+              }
+              x <- lapplyPartition(x, appendLength)
+              other <- lapplyPartition(other, appendLength)
+            }
+            
+            cartesianJRDD <- callJMethod(getJRDD(x), "cartesian", getJRDD(other))
+            # The cartesianJRDD's elements are of scala Tuple2 type. The serialized
+            # flag Here is used for the elements inside the tuples.
+            serializerMode <- getSerializedMode(x)
+            cartesianRDD <- RDD(cartesianJRDD, serializerMode)
+            
+            partitionFunc <- function(split, part) {
+              len <- length(part)
+              if (len > 0) {
+                if (serializerMode == "byte") {
+                  lengthOfValues <- part[[len]]
+                  lengthOfKeys <- part[[len - lengthOfValues]]
+                  stopifnot(len == lengthOfKeys + lengthOfValues)
+                                  
+                  if (lengthOfKeys > 1) {
+                    keys <- part[1 : (lengthOfKeys - 1)]
+                  } else {
+                    keys <- list()
+                  }
+                  if (lengthOfValues > 1) {
+                    values <- part[(lengthOfKeys + 1) : (len - 1)]                    
+                  } else {
+                    values <- list()
+                  }
+                  
+                  mergeCompactLists(keys, values)
+                } else {
+                  keys <- part[c(TRUE, FALSE)]
+                  values <- part[c(FALSE, TRUE)]
+                  mapply(
+                    function(k, v) {
+                      list(k, v)
+                    },
+                    keys,
+                    values,
+                    SIMPLIFY = FALSE,
+                    USE.NAMES = FALSE)
+                }
+              } else {
+                part
+              }
+            }
+            
+            PipelinedRDD(cartesianRDD, partitionFunc)
+          })
