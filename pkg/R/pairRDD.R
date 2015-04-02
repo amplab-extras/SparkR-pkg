@@ -770,3 +770,36 @@ setMethod("sortByKey",
             lapplyPartition(newRDD, partitionFunc)
           })
           
+#' Subtract a pair RDD with another pair RDD.
+#'
+#' Return an RDD with the pairs from x whose keys are not in other.
+#'
+#' @param x An RDD.
+#' @param other An RDD.
+#' @param numPartitions Number of the partitions in the result RDD.
+#' @return An RDD with the pairs from x whose keys are not in other.
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' rdd1 <- parallelize(sc, list(list("a", 1), list("b", 4),
+#'                              list("b", 5), list("a", 2)))
+#' rdd2 <- parallelize(sc, list(list("a", 3), list("c", 1)))
+#' collect(subtractByKey(rdd1, rdd2))
+#' # list(list("b", 4), list("b", 5))
+#'}
+#' @rdname subtractByKey
+#' @aliases subtractByKey,RDD
+setMethod("subtractByKey",
+          signature(x = "RDD", other = "RDD"),
+          function(x, other, numPartitions = SparkR::numPartitions(x)) {
+            filterFunction <- function(elem) {
+              iters <- elem[[2]]
+              (length(iters[[1]]) > 0) && (length(iters[[2]]) == 0)
+            }
+            
+            flatMapValues(filterRDD(cogroup(rdd1,
+                                            rdd2,
+                                            numPartitions = numPartitions),
+                                    filterFunction),
+                          function (v) { v[[1]] })
+          })

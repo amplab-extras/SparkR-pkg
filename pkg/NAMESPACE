@@ -57,6 +57,8 @@ exportMethods(
               "saveAsObjectFile",
               "sortBy",
               "sortByKey",
+              "subtract",
+              "subtractByKey",
               "take",
               "takeOrdered",
               "takeSample",
