@@ -455,18 +455,23 @@ test_that("cartesian() on RDDs", {
                  list(2, 1), list(2, 2), list(2, 3),
                  list(3, 1), list(3, 2), list(3, 3)))
   
+  # test case where one RDD is empty
+  emptyRdd <- parallelize(sc, list())
+  actual <- collect(cartesian(rdd, emptyRdd))
+  expect_equal(actual, list())
+
   mockFile = c("Spark is pretty.", "Spark is awesome.")
   fileName <- tempfile(pattern="spark-test", fileext=".tmp")
   writeLines(mockFile, fileName)
   
   rdd <- textFile(sc, fileName)
   actual <- collect(cartesian(rdd, rdd))
-  expect_equal(sortKeyValueList(actual),
-               list(
-                 list("Spark is awesome.", "Spark is pretty."),
-                 list("Spark is awesome.", "Spark is awesome."),
-                 list("Spark is pretty.", "Spark is pretty."),
-                 list("Spark is pretty.", "Spark is awesome.")))
+  expected <- list(
+    list("Spark is awesome.", "Spark is pretty."),
+    list("Spark is awesome.", "Spark is awesome."),
+    list("Spark is pretty.", "Spark is pretty."),
+    list("Spark is pretty.", "Spark is awesome."))
+  expect_equal(sortKeyValueList(actual), expected)
   
   rdd1 <- parallelize(sc, 0:1)
   actual <- collect(cartesian(rdd1, rdd))
@@ -479,12 +484,7 @@ test_that("cartesian() on RDDs", {
   
   rdd1 <- map(rdd, function(x) { x })
   actual <- collect(cartesian(rdd, rdd1))
-  expect_equal(sortKeyValueList(actual),
-               list(
-                 list("Spark is awesome.", "Spark is pretty."),
-                 list("Spark is awesome.", "Spark is awesome."),
-                 list("Spark is pretty.", "Spark is pretty."),
-                 list("Spark is pretty.", "Spark is awesome.")))
+  expect_equal(sortKeyValueList(actual), expected)
   
   unlink(fileName)
 })

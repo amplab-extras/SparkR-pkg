@@ -1433,7 +1433,8 @@ setMethod("zipRDD",
               # as a single byte array. For example, partitions of an RDD generated from partitionBy()
               # may be encoded as multiple byte arrays.          
               appendLength <- function(part) {
-                part[[length(part) + 1]] <- length(part) + 1
+                len <- length(part)
+                part[[len + 1]] <- len + 1
                 part
               }
               x <- lapplyPartition(x, appendLength)
@@ -1473,13 +1474,11 @@ setMethod("zipRDD",
                   values <- part[c(FALSE, TRUE)]
                 }
                 mapply(
-                    function(k, v) {
-                      list(k, v)
-                    },
-                    keys,
-                    values,
-                    SIMPLIFY = FALSE,
-                    USE.NAMES = FALSE)
+                  function(k, v) { list(k, v) },
+                  keys,
+                  values,
+                  SIMPLIFY = FALSE,
+                  USE.NAMES = FALSE)
               } else {
                 part
               }
@@ -1519,7 +1518,8 @@ setMethod("cartesian",
               # as a single byte array. For example, partitions of an RDD generated from partitionBy()
               # may be encoded as multiple byte arrays.          
               appendLength <- function(part) {
-                part[[length(part) + 1]] <- length(part) + 1
+                len <- length(part)
+                part[[len + 1]] <- len + 1
                 part
               }
               x <- lapplyPartition(x, appendLength)
@@ -1556,9 +1556,7 @@ setMethod("cartesian",
                   keys <- part[c(TRUE, FALSE)]
                   values <- part[c(FALSE, TRUE)]
                   mapply(
-                    function(k, v) {
-                      list(k, v)
-                    },
+                    function(k, v) { list(k, v) },
                     keys,
                     values,
                     SIMPLIFY = FALSE,
