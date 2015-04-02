@@ -222,6 +222,11 @@ setGeneric("glom", function(x) { standardGeneric("glom") })
 #' @export
 setGeneric("unionRDD", function(x, y) { standardGeneric("unionRDD") })
 
+#' @rdname intersection
+#' @export
+setGeneric("intersection", function(x, other, numPartitions = 1L) {
+  standardGeneric("intersection") })
+
 #' @rdname lookup
 #' @export
 setGeneric("lookup", function(x, key) { standardGeneric("lookup") })
