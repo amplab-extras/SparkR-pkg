@@ -1079,7 +1079,7 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
   while (TRUE) {
     index <- index + 1
 
-    if (index >= numPartitions){
+    if (index >= numPartitions) {
       ord <- order(unlist(resList, recursive = FALSE), decreasing = !ascending)
       resList <- resList[ord[1:num]]
       break
@@ -1089,10 +1089,10 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
     partitionArr <- callJMethod(jrdd, "collectPartitions", as.list(as.integer(index)))
     partition <- partitionArr[[1]]
 
-    # elems is capped to have at most `size` elements
+    # elems is capped to have at most `num` elements
     elems <- convertJListToRList(partition,
                                  flatten = TRUE,
-                                 logicalUpperBound = NULL,
+                                 logicalUpperBound = num,
                                  serializedMode = getSerializedMode(newRdd))
 
     # TODO: Check if this append is O(n^2)?
