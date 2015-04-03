@@ -1,4 +1,4 @@
-suchcontext("basic RDD functions")
+context("basic RDD functions")
 
 # JavaSparkContext handle
 sc <- sparkR.init()

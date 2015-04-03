@@ -628,7 +628,7 @@ setMethod("maximum",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
-j#' minimum(rdd) # 1
+#' minimum(rdd) # 1
 #'}
 #' @rdname minimum
 #' @aliases minimum,RDD
