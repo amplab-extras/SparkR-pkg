@@ -97,6 +97,10 @@ setGeneric("maximum", function(x) { standardGeneric("maximum") })
 #' @export
 setGeneric("minimum", function(x) { standardGeneric("minimum") })
 
+#' @rdname sumRDD 
+#' @export
+setGeneric("sumRDD", function(x) { standardGeneric("sumRDD") })
+
 #' @rdname foreach
 #' @export
 setGeneric("foreach", function(x, func) { standardGeneric("foreach") })
