@@ -13,6 +13,7 @@ iterations <- as.integer(args[[3]])
 D <- as.integer(args[[4]])
 
 readPartition <- function(part){
+  part = as.vector(part, mode = "character")
   part = strsplit(part, " ", fixed = T)
   list(matrix(as.numeric(unlist(part)), ncol = length(part[[1]])))
 }
