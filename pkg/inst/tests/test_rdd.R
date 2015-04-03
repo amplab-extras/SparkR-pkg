@@ -1,4 +1,4 @@
-context("basic RDD functions")
+suchcontext("basic RDD functions")
 
 # JavaSparkContext handle
 sc <- sparkR.init()
@@ -267,6 +267,11 @@ test_that("maximum() on RDDs", {
 test_that("minimum() on RDDs", {
   min <- minimum(rdd)
   expect_equal(min, 1)
+})
+
+test_that("sumRDD() on RDDs", {
+  sum <- sumRDD(rdd)
+  expect_equal(sum, 55)
 })
 
 test_that("keyBy on RDDs", {
