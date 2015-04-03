@@ -624,7 +624,7 @@ test_that("collectAsMap() on a pairwise RDD", {
 test_that("sampleByKey() on pairwise RDDs", {
   rdd <- parallelize(sc, 1:2000) 
   pairsRDD <- lapply(rdd, function(x) { if(x%%2 == 0) list("a", x) else list("b", x) })
-  fractions <- list(c("a", 0.2), c("b", 0.1))
+  fractions <- list(a = 0.2, b = 0.1)
   sample <- sampleByKey(pairsRDD, FALSE, fractions, 1618L)
   expect_equal(100 < length(lookup(sample, "a")) && 300 > length(lookup(sample, "a")), TRUE)
   expect_equal(50 < length(lookup(sample, "b")) && 150 > length(lookup(sample, "b")), TRUE)
@@ -635,7 +635,7 @@ test_that("sampleByKey() on pairwise RDDs", {
 
   rdd <- parallelize(sc, 1:2000) 
   pairsRDD <- lapply(rdd, function(x) { if(x%%2 == 0) list(2, x) else list(3, x) })
-  fractions <- list(c(2, 0.2), c(3, 0.1))
+  fractions <- list(`2` = 0.2, `3` = 0.1)
   sample <- sampleByKey(pairsRDD, TRUE, fractions, 1618L)
   expect_equal(100 < length(lookup(sample, 2)) && 300 > length(lookup(sample, 2)), TRUE)
   expect_equal(50 < length(lookup(sample, 3)) && 150 > length(lookup(sample, 3)), TRUE)

@@ -783,7 +783,7 @@ setMethod("sortByKey",
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:2000)
 #' makePairs <- lapply(rdd, function(x) { if(x%%2 == 0) list("a", x) else list("b", x) })
-#' fractions <- list(c("a", 0.2), c("b", 0.1))
+#' fractions <- list(a = 0.2, b = 0.1)
 #' sample <- sampleByKey(makePairs, FALSE, fractions, 1618L)
 #' 100 < length(lookup(sample, "a")) && 300 > length(lookup(sample, "a")) # TRUE
 #' 50 < length(lookup(sample, "b")) && 150 > length(lookup(sample, "b")) # TRUE
@@ -798,13 +798,6 @@ setMethod("sampleByKey",
           signature(x = "RDD", withReplacement = "logical",
                     fractions = "vector", seed = "integer"),
           function(x, withReplacement, fractions, seed) {
-            funk <- function(k) {
-              k[[1]]
-            }
-
-            funv <- function(v) {
-              v[[2]]
-            }
 
             # The sampler: takes a partition and returns its sampled version.
             samplingFunc <- function(split, part) {
@@ -812,16 +805,18 @@ setMethod("sampleByKey",
               res <- vector("list", length(part))
               len <- 0
 
-              fractionskey <- lapply(fractions, funk)
-              fractionsval <- lapply(fractions, funv)
+              for (elem in fractions) {
+                if (elem < 0.0)
+                  stop(paste("Negative fraction value ", fractions[which(fractions == elem)]))
+              }
 
               # Discards some random values to ensure each partition has a
               # different random seed.
               runif(split)
 
               for (elem in part) {
-                if(elem[[1]] %in% fractionskey){
-                  frac <- as.numeric(fractionsval[which(fractionskey == elem[[1]])])
+                if (elem[[1]] %in% names(fractions)) {
+                  frac <- as.numeric(fractions[which(elem[[1]] == names(fractions))])
                   if (withReplacement) {
                     count <- rpois(1, frac)
                     if (count > 0) {
