@@ -52,6 +52,7 @@ if (isEmpty != 0) {
       # Now read as many characters as described in funcLen
       data <- SparkR:::readDeserialize(inputCon)
     } else if (deserializer == "string") {
+      # Data of each partition should be a list
       data <- as.list(readLines(inputCon))
     }
     output <- computeFunc(splitIndex, data)
