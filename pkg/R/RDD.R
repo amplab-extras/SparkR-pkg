@@ -1075,6 +1075,7 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
   index <- -1
   jrdd <- getJRDD(newRdd)
   numPartitions <- numPartitions(newRdd)
+  serializedModeRDD <- getSerializedMode(newRdd)
 
   while (TRUE) {
     index <- index + 1
@@ -1093,9 +1094,8 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
     elems <- convertJListToRList(partition,
                                  flatten = TRUE,
                                  logicalUpperBound = num,
-                                 serializedMode = getSerializedMode(newRdd))
+                                 serializedMode = serializedModeRDD)
 
-    # TODO: Check if this append is O(n^2)?
     resList <- append(resList, elems)
   }
   resList
