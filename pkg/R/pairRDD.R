@@ -797,8 +797,8 @@ setMethod("subtractByKey",
               (length(iters[[1]]) > 0) && (length(iters[[2]]) == 0)
             }
             
-            flatMapValues(filterRDD(cogroup(rdd1,
-                                            rdd2,
+            flatMapValues(filterRDD(cogroup(x,
+                                            other,
                                             numPartitions = numPartitions),
                                     filterFunction),
                           function (v) { v[[1]] })
