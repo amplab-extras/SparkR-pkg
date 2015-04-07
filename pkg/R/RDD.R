@@ -1423,68 +1423,7 @@ setMethod("zipRDD",
               stop("Can only zip RDDs which have the same number of partitions.")
             }
 
-            if (getSerializedMode(x) != getSerializedMode(other) || 
-                getSerializedMode(x) == "byte") {
-              # Append the number of elements in each partition to that partition so that we can later
-              # check if corresponding partitions of both RDDs have the same number of elements.
-              #
-              # Note that this appending also serves the purpose of reserialization, because even if 
-              # any RDD is serialized, we need to reserialize it to make sure its partitions are encoded
-              # as a single byte array. For example, partitions of an RDD generated from partitionBy()
-              # may be encoded as multiple byte arrays.          
-              appendLength <- function(part) {
-                len <- length(part)
-                part[[len + 1]] <- len + 1
-                part
-              }
-              x <- lapplyPartition(x, appendLength)
-              other <- lapplyPartition(other, appendLength)
-            }
-            
-            zippedJRDD <- callJMethod(getJRDD(x), "zip", getJRDD(other))
-            # The zippedRDD's elements are of scala Tuple2 type. The serialized
-            # flag Here is used for the elements inside the tuples.
-            serializerMode <- getSerializedMode(x)
-            zippedRDD <- RDD(zippedJRDD, serializerMode)
-            
-            partitionFunc <- function(split, part) {
-              len <- length(part)
-              if (len > 0) {
-                if (serializerMode == "byte") {
-                  lengthOfValues <- part[[len]]
-                  lengthOfKeys <- part[[len - lengthOfValues]]
-                  stopifnot(len == lengthOfKeys + lengthOfValues)
-                  
-                  # check if corresponding partitions of both RDDs have the same number of elements.
-                  if (lengthOfKeys != lengthOfValues) {
-                    stop("Can only zip RDDs with same number of elements in each pair of corresponding partitions.")
-                  }
-                  
-                  if (lengthOfKeys > 1) {
-                    keys <- part[1 : (lengthOfKeys - 1)]
-                    values <- part[(lengthOfKeys + 1) : (len - 1)]                    
-                  } else {
-                    keys <- list()
-                    values <- list()
-                  }
-                } else {
-                  # Keys, values must have same length here, because this has
-                  # been validated inside the JavaRDD.zip() function.
-                  keys <- part[c(TRUE, FALSE)]
-                  values <- part[c(FALSE, TRUE)]
-                }
-                mapply(
-                  function(k, v) { list(k, v) },
-                  keys,
-                  values,
-                  SIMPLIFY = FALSE,
-                  USE.NAMES = FALSE)
-              } else {
-                part
-              }
-            }
-            
-            PipelinedRDD(zippedRDD, partitionFunc)
+            doZipOrCartesian(x, other, "zip")
           })
 
 #' Cartesian product of this RDD and another one.
@@ -1508,64 +1447,5 @@ setMethod("zipRDD",
 setMethod("cartesian",
           signature(x = "RDD", other = "RDD"),
           function(x, other) {
-            if (getSerializedMode(x) != getSerializedMode(other) || 
-                  getSerializedMode(x) == "byte") {
-              # Append the number of elements in each partition to that partition so that we can later
-              # know the boundary of elements from x and other.
-              #
-              # Note that this appending also serves the purpose of reserialization, because even if 
-              # any RDD is serialized, we need to reserialize it to make sure its partitions are encoded
-              # as a single byte array. For example, partitions of an RDD generated from partitionBy()
-              # may be encoded as multiple byte arrays.          
-              appendLength <- function(part) {
-                len <- length(part)
-                part[[len + 1]] <- len + 1
-                part
-              }
-              x <- lapplyPartition(x, appendLength)
-              other <- lapplyPartition(other, appendLength)
-            }
-            
-            cartesianJRDD <- callJMethod(getJRDD(x), "cartesian", getJRDD(other))
-            # The cartesianJRDD's elements are of scala Tuple2 type. The serialized
-            # flag Here is used for the elements inside the tuples.
-            serializerMode <- getSerializedMode(x)
-            cartesianRDD <- RDD(cartesianJRDD, serializerMode)
-            
-            partitionFunc <- function(split, part) {
-              len <- length(part)
-              if (len > 0) {
-                if (serializerMode == "byte") {
-                  lengthOfValues <- part[[len]]
-                  lengthOfKeys <- part[[len - lengthOfValues]]
-                  stopifnot(len == lengthOfKeys + lengthOfValues)
-                                  
-                  if (lengthOfKeys > 1) {
-                    keys <- part[1 : (lengthOfKeys - 1)]
-                  } else {
-                    keys <- list()
-                  }
-                  if (lengthOfValues > 1) {
-                    values <- part[(lengthOfKeys + 1) : (len - 1)]                    
-                  } else {
-                    values <- list()
-                  }
-                  
-                  mergeCompactLists(keys, values)
-                } else {
-                  keys <- part[c(TRUE, FALSE)]
-                  values <- part[c(FALSE, TRUE)]
-                  mapply(
-                    function(k, v) { list(k, v) },
-                    keys,
-                    values,
-                    SIMPLIFY = FALSE,
-                    USE.NAMES = FALSE)
-                }
-              } else {
-                part
-              }
-            }
-            
-            PipelinedRDD(cartesianRDD, partitionFunc)
+            doZipOrCartesian(x, other, "cartesian")
           })

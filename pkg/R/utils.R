@@ -419,3 +419,81 @@ cleanClosure <- function(func, checkedFuncs = new.env()) {
   }
   func
 }
+
+# Common function for implmentation of zipRDD() and cartesian().
+# param
+#   x An RDD.
+#   other An RDD.
+#
+# return value
+#   The result RDD.
+doZipOrCartesian <- function(x, other, operation = c("zip", "cartesian")) {
+  match.arg(operation)
+  if (getSerializedMode(x) != getSerializedMode(other) || 
+      getSerializedMode(x) == "byte") {
+    # Append the number of elements in each partition to that partition so that we can later
+    # know the boundary of elements from x and other.
+    #
+    # Note that this appending also serves the purpose of reserialization, because even if 
+    # any RDD is serialized, we need to reserialize it to make sure its partitions are encoded
+    # as a single byte array. For example, partitions of an RDD generated from partitionBy()
+    # may be encoded as multiple byte arrays.          
+    appendLength <- function(part) {
+      len <- length(part)
+      part[[len + 1]] <- len + 1
+      part
+    }
+    x <- lapplyPartition(x, appendLength)
+    other <- lapplyPartition(other, appendLength)
+  }
+  
+  jrdd <- callJMethod(getJRDD(x), operation, getJRDD(other))
+  # The jrdd's elements are of scala Tuple2 type. The serialized
+  # flag here is used for the elements inside the tuples.
+  serializerMode <- getSerializedMode(x)
+  rdd <- RDD(jrdd, serializerMode)
+  
+  partitionFunc <- function(split, part) {
+    len <- length(part)
+    if (len > 0) {
+      if (serializerMode == "byte") {
+        lengthOfValues <- part[[len]]
+        lengthOfKeys <- part[[len - lengthOfValues]]
+        stopifnot(len == lengthOfKeys + lengthOfValues)
+        
+        # For zip operation, check if corresponding partitions of both RDDs have the same number of elements.
+        if (operation == "zip" && lengthOfKeys != lengthOfValues) {
+          stop("Can only zip RDDs with same number of elements in each pair of corresponding partitions.")
+        }
+        
+        if (lengthOfKeys > 1) {
+          keys <- part[1 : (lengthOfKeys - 1)]
+        } else {
+          keys <- list()
+        }
+        if (lengthOfValues > 1) {
+          values <- part[(lengthOfKeys + 1) : (len - 1)]                    
+        } else {
+          values <- list()
+        }
+        
+        if (operation == "cartesian") {
+          return(mergeCompactLists(keys, values))
+        }
+      } else {
+        keys <- part[c(TRUE, FALSE)]
+        values <- part[c(FALSE, TRUE)]
+      }
+      mapply(
+        function(k, v) { list(k, v) },
+        keys,
+        values,
+        SIMPLIFY = FALSE,
+        USE.NAMES = FALSE)
+    } else {
+      part
+    }
+  }
+  
+  PipelinedRDD(rdd, partitionFunc)
+}
