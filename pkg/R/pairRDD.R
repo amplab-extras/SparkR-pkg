@@ -781,16 +781,24 @@ setMethod("sortByKey",
 #' @examples
 #'\dontrun{
 #' sc <- sparkR.init()
-#' rdd <- parallelize(sc, 1:2000)
-#' pairs <- lapply(rdd, function(x) { if (x%%2 == 0) list("a", x) else list("b", x) })
-#' fractions <- list(a = 0.2, b = 0.1)
+#' rdd <- parallelize(sc, 1:3000)
+#' pairs <- lapply(rdd, function(x) { if (x %% 3 == 0) list("a", x) 
+#'                                    else { if (x %% 3 == 1) list("b", x) else list("c", x) }})
+#' fractions <- list(a = 0.2, b = 0.1, c = 0.3)
 #' sample <- sampleByKey(pairs, FALSE, fractions, 1618L)
 #' 100 < length(lookup(sample, "a")) && 300 > length(lookup(sample, "a")) # TRUE
 #' 50 < length(lookup(sample, "b")) && 150 > length(lookup(sample, "b")) # TRUE
+#' 200 < length(lookup(sample, "c")) && 400 > length(lookup(sample, "c")) # TRUE
 #' lookup(sample, "a")[which.min(lookup(sample, "a"))] >= 0 # TRUE
 #' lookup(sample, "a")[which.max(lookup(sample, "a"))] <= 2000 # TRUE
 #' lookup(sample, "b")[which.min(lookup(sample, "b"))] >= 0 # TRUE
 #' lookup(sample, "b")[which.max(lookup(sample, "b"))] <= 2000 # TRUE
+#' lookup(sample, "c")[which.min(lookup(sample, "c"))] >= 0 # TRUE
+#' lookup(sample, "c")[which.max(lookup(sample, "c"))] <= 2000 # TRUE
+#' fractions <- list(a = 0.2, b = 0.1, c = 0.3, d = 0.4)
+#' sample <- sampleByKey(pairs, FALSE, fractions, 1618L) # Key "d" will be ignored
+#' fractions <- list(a = 0.2, b = 0.1)
+#' sample <- sampleByKey(pairs, FALSE, fractions, 1618L) # KeyError: "c"
 #'}
 #' @rdname sampleByKey
 #' @aliases sampleByKey,RDD-method
@@ -829,6 +837,8 @@ setMethod("sampleByKey",
                     }
                   }
                 }
+                else
+                  stop("KeyError: \"", elem[[1]], "\"")
               }
 
               # TODO(zongheng): look into the performance of the current
