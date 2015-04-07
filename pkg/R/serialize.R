@@ -151,14 +151,3 @@ writeArgs <- function(con, args) {
     }
   }
 }
-
-writeStrings <- function(con, stringList) {
-  len <- length(stringList)
-
-  writeInt(len)
-  if (len > 0) {
-    for (s in stringList) {
-      writeString(con, s)
-    }
-  }
-}
