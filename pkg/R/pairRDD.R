@@ -782,9 +782,9 @@ setMethod("sortByKey",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:2000)
-#' makePairs <- lapply(rdd, function(x) { if(x%%2 == 0) list("a", x) else list("b", x) })
+#' pairs <- lapply(rdd, function(x) { if (x%%2 == 0) list("a", x) else list("b", x) })
 #' fractions <- list(a = 0.2, b = 0.1)
-#' sample <- sampleByKey(makePairs, FALSE, fractions, 1618L)
+#' sample <- sampleByKey(pairs, FALSE, fractions, 1618L)
 #' 100 < length(lookup(sample, "a")) && 300 > length(lookup(sample, "a")) # TRUE
 #' 50 < length(lookup(sample, "b")) && 150 > length(lookup(sample, "b")) # TRUE
 #' lookup(sample, "a")[which.min(lookup(sample, "a"))] >= 0 # TRUE
