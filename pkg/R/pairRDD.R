@@ -799,20 +799,19 @@ setMethod("sampleByKey",
                     fractions = "vector", seed = "integer"),
           function(x, withReplacement, fractions, seed) {
 
+            for (elem in fractions) {
+              if (elem < 0.0)
+                stop(paste("Negative fraction value ", fractions[which(fractions == elem)]))
+            }
+
             # The sampler: takes a partition and returns its sampled version.
             samplingFunc <- function(split, part) {
-              set.seed(seed)
+              set.seed(bitwXor(seed, split))
               res <- vector("list", length(part))
               len <- 0
 
-              for (elem in fractions) {
-                if (elem < 0.0)
-                  stop(paste("Negative fraction value ", fractions[which(fractions == elem)]))
-              }
-
-              # Discards some random values to ensure each partition has a
-              # different random seed.
-              runif(split)
+              # mixing because the initial seeds are close to each other
+              runif(10)
 
               for (elem in part) {
                 if (elem[[1]] %in% names(fractions)) {
