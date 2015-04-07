@@ -424,6 +424,7 @@ cleanClosure <- function(func, checkedFuncs = new.env()) {
 # param
 #   x An RDD.
 #   other An RDD.
+#   operation The specified operation, "zip" or "cartesian".
 #
 # return value
 #   The result RDD.
