@@ -1509,8 +1509,9 @@ setMethod("zipRDD",
 setMethod("subtract",
           signature(x = "RDD", other = "RDD"),
           function(x, other, numPartitions = SparkR::numPartitions(x)) {
-            rdd1 <- map(x, function(e) { list(e, NA) })
-            rdd2 <- map(other, function(e) { list(e, NA) })
+            mapFunction <- function(e) { list(e, NA) }
+            rdd1 <- map(x, mapFunction)
+            rdd2 <- map(other, mapFunction)
             
             keys(subtractByKey(rdd1, rdd2, numPartitions))
           })

@@ -454,7 +454,7 @@ test_that("subtract() on RDDs", {
   actual <- collect(subtract(rdd1, rdd1))
   expect_equal(actual, list())
 
-  # subtractByKey by an empty RDD
+  # subtract by an empty RDD
   rdd2 <- parallelize(sc, list())
   actual <- collect(subtract(rdd1, rdd2))
   expect_equal(as.list(sort(as.vector(actual, mode="integer"))),
