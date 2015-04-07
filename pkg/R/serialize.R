@@ -52,8 +52,9 @@ writeJobj <- function(con, value) {
 }
 
 writeString <- function(con, value) {
-  writeInt(con, as.integer(nchar(value) + 1))
-  writeBin(value, con, endian = "big")
+  utfVal <- enc2utf8(value)
+  writeInt(con, as.integer(nchar(utfVal, type = "bytes") + 1))
+  writeBin(utfVal, con, endian = "big")
 }
 
 writeInt <- function(con, value) {
@@ -171,8 +172,4 @@ writeArgs <- function(con, args) {
       writeObject(con, a)
     }
   }
-}
-
-writeStrings <- function(con, stringList) {
-  writeLines(unlist(stringList), con)
 }

@@ -14,6 +14,8 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkConf, SparkEnv, SparkException, TaskContext}
 
+import edu.berkeley.cs.amplab.sparkr.SerDe._
+
 private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     parent: RDD[T],
     numPartitions: Int,
@@ -24,9 +26,14 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     rLibDir: String,
     broadcastVars: Array[Broadcast[Object]])
   extends RDD[U](parent) {
+  protected var dataStream: DataInputStream = _
+  private var bootTime: Double = _
   override def getPartitions = parent.partitions
 
   override def compute(split: Partition, context: TaskContext): Iterator[U] = {
+
+    // Timing start
+    bootTime = System.currentTimeMillis / 1000.0
 
     // The parent may be also an RRDD, so we should launch it first.
     val parentIterator = firstParent[T].iterator(split, context)
@@ -51,7 +58,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     // the socket used to receive the output of task
     val outSocket = serverSocket.accept()
     val inputStream = new BufferedInputStream(outSocket.getInputStream)
-    val dataStream = openDataStream(inputStream)
+    dataStream = new DataInputStream(inputStream)
     serverSocket.close()
 
     try {
@@ -137,6 +144,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
             } else if (deserializer == SerializationFormats.ROW) {
               dataOut.write(elem.asInstanceOf[Array[Byte]])
             } else if (deserializer == SerializationFormats.STRING) {
+              // write string(for StringRRDD)
               printOut.println(elem)
             }
           }
@@ -163,9 +171,41 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
     }.start()
   }
 
-  protected def openDataStream(input: InputStream): Closeable
+  protected def readData(length: Int): U
 
-  protected def read(): U
+  protected def read(): U = {
+    try {
+      val length = dataStream.readInt()
+
+      length match {
+        case SpecialLengths.TIMING_DATA =>
+          // Timing data from R worker
+          val boot = dataStream.readDouble - bootTime
+          val init = dataStream.readDouble
+          val broadcast = dataStream.readDouble
+          val input = dataStream.readDouble
+          val compute = dataStream.readDouble
+          val output = dataStream.readDouble
+          logInfo(
+            ("Times: boot = %.3f s, init = %.3f s, broadcast = %.3f s, " +
+             "read-input = %.3f s, compute = %.3f s, write-output = %.3f s, " +
+             "total = %.3f s").format(
+               boot,
+               init,
+               broadcast,
+               input,
+               compute,
+               output,
+               boot + init + broadcast + input + compute + output))
+          read()
+        case length if length >= 0 =>
+          readData(length)
+      }
+    } catch {
+      case eof: EOFException =>
+        throw new SparkException("R worker exited unexpectedly (cranshed)", eof)
+    }
+  }
 }
 
 /**
@@ -184,30 +224,15 @@ private class PairwiseRRDD[T: ClassTag](
                                           SerializationFormats.BYTE, packageNames, rLibDir,
                                           broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
 
-  private var dataStream: DataInputStream = _
-
-  override protected def openDataStream(input: InputStream) = {
-    dataStream = new DataInputStream(input)
-    dataStream
-  }
-
-  override protected def read(): (Int, Array[Byte]) = {
-    try {
-      val length = dataStream.readInt()
-
-      length match {
-        case length if length == 2 =>
-          val hashedKey = dataStream.readInt()
-          val contentPairsLength = dataStream.readInt()
-          val contentPairs = new Array[Byte](contentPairsLength)
-          dataStream.readFully(contentPairs)
-          (hashedKey, contentPairs)
-        case _ => null   // End of input
-      }
-    } catch {
-      case eof: EOFException => {
-        throw new SparkException("R worker exited unexpectedly (crashed)", eof)
-      }
+  override protected def readData(length: Int): (Int, Array[Byte]) = {
+    length match {
+      case length if length == 2 =>
+        val hashedKey = dataStream.readInt()
+        val contentPairsLength = dataStream.readInt()
+        val contentPairs = new Array[Byte](contentPairsLength)
+        dataStream.readFully(contentPairs)
+        (hashedKey, contentPairs)
+      case _ => null
     }
   }
 
@@ -229,28 +254,13 @@ private class RRDD[T: ClassTag](
                                    serializer, packageNames, rLibDir,
                                    broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
 
-  private var dataStream: DataInputStream = _
-
-  override protected def openDataStream(input: InputStream) = {
-    dataStream = new DataInputStream(input)
-    dataStream
-  }
-
-  override protected def read(): Array[Byte] = {
-    try {
-      val length = dataStream.readInt()
-
-      length match {
-        case length if length > 0 =>
-          val obj = new Array[Byte](length)
-          dataStream.readFully(obj, 0, length)
-          obj
-        case _ => null
-      }
-    } catch {
-      case eof: EOFException => {
-        throw new SparkException("R worker exited unexpectedly (crashed)", eof)
-      }
+  override protected def readData(length: Int): Array[Byte] = {
+    length match {
+      case length if length > 0 =>
+        val obj = new Array[Byte](length)
+        dataStream.read(obj, 0, length)
+        obj
+      case _ => null
     }
   }
 
@@ -271,24 +281,19 @@ private class StringRRDD[T: ClassTag](
                               packageNames, rLibDir,
                               broadcastVars.map(x => x.asInstanceOf[Broadcast[Object]])) {
 
-  private var dataStream: BufferedReader = _
-
-  override protected def openDataStream(input: InputStream) = {
-    dataStream = new BufferedReader(new InputStreamReader(input))
-    dataStream
-  }
-
-  override protected def read(): String = {
-    try {
-      dataStream.readLine()
-    } catch {
-      case e: IOException => {
-        throw new SparkException("R worker exited unexpectedly (crashed)", e)
-      }
+  override protected def readData(length: Int): String = {
+    length match {
+      case length if length > 0 =>
+        readStringBytes(dataStream, length)
+      case _ => null
     }
   }
 
   lazy val asJavaRDD : JavaRDD[String] = JavaRDD.fromRDD(this)
+}
+
+private object SpecialLengths {
+  val TIMING_DATA   = -1
 }
 
 private[sparkr] class BufferedStreamThread(

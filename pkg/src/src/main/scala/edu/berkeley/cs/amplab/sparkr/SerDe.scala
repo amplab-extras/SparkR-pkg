@@ -68,13 +68,17 @@ object SerDe {
     in.readDouble()
   }
 
+  def readStringBytes(in: DataInputStream, len: Int) = {
+    val bytes = new Array[Byte](len)
+    in.readFully(bytes)
+    assert(bytes(len - 1) == 0)
+    val str = new String(bytes.dropRight(1), "UTF-8")
+    str
+  }
+
   def readString(in: DataInputStream) = {
     val len = in.readInt()
-    val asciiBytes = new Array[Byte](len)
-    in.readFully(asciiBytes)
-    assert(asciiBytes(len - 1) == 0)
-    val str = new String(asciiBytes.dropRight(1).map(_.toChar))
-    str
+    readStringBytes(in, len)
   }
 
   def readBoolean(in: DataInputStream) = {
