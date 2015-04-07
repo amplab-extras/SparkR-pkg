@@ -1498,6 +1498,7 @@ setMethod("zipRDD",
 #'
 #' @param x An RDD.
 #' @param other An RDD.
+#' @param numPartitions The number of partitions in the result RDD.
 #' @return An RDD which is the intersection of these two RDDs.
 #' @examples
 #'\dontrun{
