@@ -5,6 +5,7 @@
 \alias{sampleByKey}
 \alias{sampleByKey,RDD,logical,vector,integer-method}
 \alias{sampleByKey,RDD-method}
+\title{Return a subset of this RDD sampled by key.}
 \usage{
 sampleByKey(x, withReplacement, fractions, seed)
 
@@ -22,7 +23,8 @@ list(K, V) or c(K, V).}
 \item{fraction}{The (rough) sample target fraction}
 }
 \description{
-\code{sampleByKey} return a subset RDD of the given RDD sampled by key
+\code{sampleByKey} Create a sample of this RDD using variable sampling rates
+for different keys as specified by fractions, a key to sampling rate map.
 }
 \examples{
 \dontrun{
