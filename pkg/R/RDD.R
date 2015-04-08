@@ -638,6 +638,23 @@ setMethod("minimum",
             reduce(x, min)
           })
 
+#' Add up the elements in an RDD.
+#'
+#' @param x The RDD to add up the elements in
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' rdd <- parallelize(sc, 1:10)
+#' sumRDD(rdd) # 55
+#'}
+#' @rdname sumRDD 
+#' @aliases sumRDD,RDD
+setMethod("sumRDD",
+          signature(x = "RDD"),
+          function(x) {
+            reduce(x, "+")
+          })
+
 #' Applies a function to all elements in an RDD, and force evaluation.
 #'
 #' @param x The RDD to apply the function
@@ -699,6 +716,7 @@ setMethod("take",
             index <- -1
             jrdd <- getJRDD(x)
             numPartitions <- numPartitions(x)
+            serializedModeRDD <- getSerializedMode(x)
 
             # TODO(shivaram): Collect more than one partition based on size
             # estimates similar to the scala version of `take`.
@@ -717,12 +735,13 @@ setMethod("take",
               elems <- convertJListToRList(partition,
                                            flatten = TRUE,
                                            logicalUpperBound = size,
-                                           serializedMode = getSerializedMode(x))
-              # TODO: Check if this append is O(n^2)?
+                                           serializedMode = serializedModeRDD)
+
               resList <- append(resList, elems)
             }
             resList
           })
+
 
 #' First
 #'
@@ -1062,21 +1081,42 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
     if (num < length(part)) {
       # R limitation: order works only on primitive types!
       ord <- order(unlist(part, recursive = FALSE), decreasing = !ascending)
-      list(part[ord[1:num]])
+      part[ord[1:num]]
     } else {
-      list(part)
+      part
     }
   }
 
-  reduceFunc <- function(elems, part) {
-    newElems <- append(elems, part)
-    # R limitation: order works only on primitive types!
-    ord <- order(unlist(newElems, recursive = FALSE), decreasing = !ascending)
-    newElems[ord[1:num]]
-  }
-  
   newRdd <- mapPartitions(x, partitionFunc)
-  reduce(newRdd, reduceFunc)
+
+  resList <- list()
+  index <- -1
+  jrdd <- getJRDD(newRdd)
+  numPartitions <- numPartitions(newRdd)
+  serializedModeRDD <- getSerializedMode(newRdd)
+
+  while (TRUE) {
+    index <- index + 1
+
+    if (index >= numPartitions) {
+      ord <- order(unlist(resList, recursive = FALSE), decreasing = !ascending)
+      resList <- resList[ord[1:num]]
+      break
+    }
+
+    # a JList of byte arrays
+    partitionArr <- callJMethod(jrdd, "collectPartitions", as.list(as.integer(index)))
+    partition <- partitionArr[[1]]
+
+    # elems is capped to have at most `num` elements
+    elems <- convertJListToRList(partition,
+                                 flatten = TRUE,
+                                 logicalUpperBound = num,
+                                 serializedMode = serializedModeRDD)
+
+    resList <- append(resList, elems)
+  }
+  resList
 }
 
 #' Returns the first N elements from an RDD in ascending order.
@@ -1514,4 +1554,41 @@ setMethod("subtract",
             rdd2 <- map(other, mapFunction)
             
             keys(subtractByKey(rdd1, rdd2, numPartitions))
+          })
+
+#' Intersection of this RDD and another one.
+#'
+#' Return the intersection of this RDD and another one.
+#' The output will not contain any duplicate elements, 
+#' even if the input RDDs did. Performs a hash partition
+#' across the cluster.
+#' Note that this method performs a shuffle internally. 
+#'
+#' @param x An RDD.
+#' @param other An RDD.
+#' @param numPartitions The number of partitions in the result RDD.
+#' @return An RDD which is the intersection of these two RDDs.
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' rdd1 <- parallelize(sc, list(1, 10, 2, 3, 4, 5))
+#' rdd2 <- parallelize(sc, list(1, 6, 2, 3, 7, 8))
+#' collect(sortBy(intersection(rdd1, rdd2), function(x) { x }))
+#' # list(1, 2, 3)
+#'}
+#' @rdname intersection
+#' @aliases intersection,RDD
+setMethod("intersection",
+          signature(x = "RDD", other = "RDD"),
+          function(x, other, numPartitions = SparkR::numPartitions(x)) {
+            rdd1 <- map(x, function(v) { list(v, NA) })
+            rdd2 <- map(other, function(v) { list(v, NA) })
+            
+            filterFunction <- function(elem) {
+              iters <- elem[[2]]
+              all(as.vector(
+                lapply(iters, function(iter) { length(iter) > 0 }), mode = "logical"))
+            }
+
+            keys(filterRDD(cogroup(rdd1, rdd2, numPartitions = numPartitions), filterFunction))
           })
