@@ -338,7 +338,7 @@ setGeneric("sortByKey",
 #' @export
 setGeneric("subtractByKey", 
            function(x, other, numPartitions = 1L) {
-            standardGeneric("subtractByKey")
+             standardGeneric("subtractByKey")
            })
 
 #' @rdname subtract
