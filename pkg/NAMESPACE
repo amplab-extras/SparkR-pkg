@@ -167,8 +167,6 @@ export("cacheTable",
        "jsonRDD",
        "loadDF",
        "parquetFile",
-       "buildSchema",
-       "field",
        "sql",
        "table",
        "tableNames",
@@ -178,7 +176,12 @@ export("cacheTable",
 
 export("sparkRSQL.init",
        "sparkRHive.init")
-export("print.structType",
+
+export("structField",
+       "structField.jobj",
+       "structField.character",
        "print.structField",
-       "print.struct",
-       "print.field")
+       "structType",
+       "structType.jobj",
+       "structType.structField",
+       "print.structField")
