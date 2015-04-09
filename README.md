@@ -5,7 +5,7 @@
 SparkR is an R package that provides a light-weight frontend to use Spark from
 R.
 
-*NOTE: As of April 2015, SparkR has been [merged](https://github.com/apache/spark/pull/5096) into Apache Spark and is shipping in an upcoming release (1.4) due early summer 2015. This repo currently targets users using released versions of Spark.*
+*NOTE: As of April 2015, SparkR has been [merged](https://github.com/apache/spark/pull/5096) into Apache Spark and is shipping in an upcoming release (1.4) due early summer 2015. This repo currently targets users using released versions of Spark. __This repo no longer accepts new pull requests, and they should now be submitted to [apache/spark](https://github.com/apache/spark); see [here](https://cwiki.apache.org/confluence/display/SPARK/Contributing+to+Spark) for some instructions.__*
 
 
 ## Installing SparkR
@@ -177,6 +177,6 @@ export JAVA_HOME=/usr/java/jdk1.7.0_67-cloudera
 
 ## Report Issues/Feedback 
 
-For better tracking and collaboration, issues and TODO items are reported to a dedicated [SparkR JIRA](https://sparkr.atlassian.net/browse/SPARKR/).
+For better tracking and collaboration, issues and TODO items are reported to the [Apache Spark JIRA](https://issues.apache.org/jira/browse/SPARK) under the component tag "SparkR".
 
-In your pull request, please cross reference the ticket item created. Likewise, if you already have a pull request ready, please reference it in your ticket item.
+In your pull request, please cross reference the ticket item created and append "[SPARKR]" (e.g.: "[SPARK-1234] [SPARKR] Pull request").
