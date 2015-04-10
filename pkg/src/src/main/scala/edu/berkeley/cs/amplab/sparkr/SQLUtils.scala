@@ -27,7 +27,7 @@ object SQLUtils {
     StructType(fields)
   }
 
-  def DataTypeObject(dataType: String): DataType = {
+  def getSQLDataType(dataType: String): DataType = {
     dataType match {
       case "byte" => org.apache.spark.sql.types.ByteType
       case "integer" => org.apache.spark.sql.types.IntegerType
@@ -46,7 +46,7 @@ object SQLUtils {
   }
 
   def createStructField(name: String, dataType: String, nullable: Boolean): StructField = {
-    val dtObj = DataTypeObject(dataType)
+    val dtObj = getSQLDataType(dataType)
     StructField(name, dtObj, nullable)
   }
 
