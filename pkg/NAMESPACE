@@ -181,5 +181,12 @@ export("cacheTable",
 
 export("sparkRSQL.init",
        "sparkRHive.init")
-export("print.structType",
-       "print.structField")
+
+export("structField",
+       "structField.jobj",
+       "structField.character",
+       "print.structField",
+       "structType",
+       "structType.jobj",
+       "structType.structField",
+       "print.structType")
