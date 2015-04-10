@@ -99,6 +99,7 @@ exportClasses("DataFrame")
 exportMethods("columns",
               "distinct",
               "dtypes",
+              "except",
               "explain",
               "filter",
               "groupBy",

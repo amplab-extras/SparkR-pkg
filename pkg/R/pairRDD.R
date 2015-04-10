@@ -411,7 +411,7 @@ setMethod("combineByKey",
               pred <- function(item) exists(item$hash, keys)
               lapply(part,
                      function(item) {
-                       item$hash <- as.character(item[[1]])
+                       item$hash <- as.character(hashCode(item[[1]]))
                        updateOrCreatePair(item, keys, combiners, pred, mergeValue, createCombiner)
                      })
               convertEnvsToList(keys, combiners)
@@ -424,7 +424,7 @@ setMethod("combineByKey",
               pred <- function(item) exists(item$hash, keys)
               lapply(part,
                      function(item) {
-                       item$hash <- as.character(item[[1]])
+                       item$hash <- as.character(hashCode(item[[1]]))
                        updateOrCreatePair(item, keys, combiners, pred, mergeCombiners, identity)
                      })
               convertEnvsToList(keys, combiners)
@@ -804,8 +804,11 @@ setMethod("subtractByKey",
                           function (v) { v[[1]] })
           })
 
+#' Return a subset of this RDD sampled by key.
+#' 
 #' @description
-#' \code{sampleByKey} return a subset RDD of the given RDD sampled by key
+#' \code{sampleByKey} Create a sample of this RDD using variable sampling rates
+#' for different keys as specified by fractions, a key to sampling rate map.
 #'
 #' @param x The RDD to sample elements by key, where each element is
 #'             list(K, V) or c(K, V).
