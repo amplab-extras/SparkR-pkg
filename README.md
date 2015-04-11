@@ -5,13 +5,21 @@
 SparkR is an R package that provides a light-weight frontend to use Spark from
 R.
 
+*NOTE: As of April 2015, SparkR has been [merged](https://github.com/apache/spark/pull/5096) into Apache Spark and is shipping in an upcoming release (1.4) due early summer 2015. This repo currently targets users using released versions of Spark. __This repo no longer accepts new pull requests, and they should now be submitted to [apache/spark](https://github.com/apache/spark); see [here](https://cwiki.apache.org/confluence/display/SPARK/Contributing+to+Spark) for some instructions.__*
+
 
 ## Installing SparkR
 
 ### Requirements
-SparkR requires Scala 2.10 and Spark version >= 0.9.0. Current build by default uses
-Apache Spark 1.1.0. You can also build SparkR against a
+SparkR requires
+
+* Scala 2.10, and
+* Spark version >= 0.9.0 and <= 1.2.
+
+Current build by default uses Apache Spark 1.1.0. You can also build SparkR against a
 different Spark version (>= 0.9.0) by modifying `pkg/src/build.sbt`.
+
+*DataFrame*: [DataFrame](https://spark.apache.org/docs/1.3.0/sql-programming-guide.html) was introduced in Spark 1.3; the 1.3-compatible SparkR version can be found in the [`sparkr-sql` branch](https://github.com/amplab-extras/SparkR-pkg/tree/sparkr-sql), which includes a preliminary R API to work with DataFrames.
 
 ### Package installation
 To develop SparkR, you can build the scala package and the R package using
@@ -98,7 +106,7 @@ Finally, to stop the cluster run
 
     sparkR.stop()
     
-sparkR.stop() can be invoked to terminate a SparkContext created previously via sparkR.init(). Then you can call sparR.init() again to create a new SparkContext that may have different configurations.
+sparkR.stop() can be invoked to terminate a SparkContext created previously via sparkR.init(). Then you can call sparkR.init() again to create a new SparkContext that may have different configurations.
     
 ## Examples, Unit tests
 
@@ -152,7 +160,7 @@ YARN_CONF_DIR=/root/ephemeral-hdfs/conf/ ./sparkR examples/pi.R yarn-client
 
 ## Running on a cluster using sparkR-submit
 
-sparkR-submit is a script introduced to facilitate submission of SparkR jobs to a Spark supported cluster (eg. Standalone, Mesos, YARN).
+sparkR-submit is a script introduced to facilitate submission of SparkR jobs to a Spark supported cluster (e.g. Standalone, Mesos, YARN).
 It supports the same commandline parameters as [spark-submit](http://spark.apache.org/docs/latest/submitting-applications.html). SPARK_HOME and JAVA_HOME must be defined.
 
 On YARN, YARN_CONF_DIR must be defined. sparkR-submit supports [YARN deploy modes](http://spark.apache.org/docs/latest/running-on-yarn.html): yarn-client and yarn-cluster.
@@ -169,6 +177,6 @@ export JAVA_HOME=/usr/java/jdk1.7.0_67-cloudera
 
 ## Report Issues/Feedback 
 
-For better tracking and collaboration, issues and TODO items are reported to a dedicated [SparkR JIRA](https://sparkr.atlassian.net/browse/SPARKR/).
+For better tracking and collaboration, issues and TODO items are reported to the [Apache Spark JIRA](https://issues.apache.org/jira/browse/SPARK) under the component tag "SparkR".
 
-In your pull request, please cross reference the ticket item created. Likewise, if you already have a pull request ready, please reference it in your ticket item.
+In your pull request, please cross reference the ticket item created and append "[SPARKR]" (e.g.: "[SPARK-1234] [SPARKR] Pull request").

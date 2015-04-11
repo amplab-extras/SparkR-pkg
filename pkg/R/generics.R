@@ -97,6 +97,10 @@ setGeneric("maximum", function(x) { standardGeneric("maximum") })
 #' @export
 setGeneric("minimum", function(x) { standardGeneric("minimum") })
 
+#' @rdname sumRDD 
+#' @export
+setGeneric("sumRDD", function(x) { standardGeneric("sumRDD") })
+
 #' @rdname foreach
 #' @export
 setGeneric("foreach", function(x, func) { standardGeneric("foreach") })
@@ -226,6 +230,11 @@ setGeneric("unionRDD", function(x, y) { standardGeneric("unionRDD") })
 #' @export
 setGeneric("cartesian", function(x, other) { standardGeneric("cartesian") })
 
+#' @rdname intersection
+#' @export
+setGeneric("intersection", function(x, other, numPartitions = 1L) {
+  standardGeneric("intersection") })
+
 #' @rdname lookup
 #' @export
 setGeneric("lookup", function(x, key) { standardGeneric("lookup") })
@@ -250,6 +259,12 @@ setGeneric("mapValues", function(X, FUN) { standardGeneric("mapValues") })
 #' @export
 setGeneric("flatMapValues", function(X, FUN) { standardGeneric("flatMapValues") })
 
+#' @rdname sampleByKey 
+#' @export
+setGeneric("sampleByKey",
+           function(x, withReplacement, fractions, seed) {
+             standardGeneric("sampleByKey")
+           })
 
 ############ Shuffle Functions ############
 
@@ -333,12 +348,24 @@ setGeneric("cogroup",
 
 #' @rdname sortByKey
 #' @export
-setGeneric("sortByKey", function(x,
-                                 ascending = TRUE,
-                                 numPartitions = 1L) {
-  standardGeneric("sortByKey")
-})
+setGeneric("sortByKey",
+           function(x, ascending = TRUE, numPartitions = 1L) {
+             standardGeneric("sortByKey")
+           })
 
+#' @rdname subtractByKey
+#' @export
+setGeneric("subtractByKey", 
+           function(x, other, numPartitions = 1L) {
+             standardGeneric("subtractByKey")
+           })
+
+#' @rdname subtract
+#' @export
+setGeneric("subtract", 
+           function(x, other, numPartitions = 1L) {
+             standardGeneric("subtract")
+           })
 
 ############ Broadcast Variable Methods ############
 
