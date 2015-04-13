@@ -1463,7 +1463,13 @@ setMethod("zipRDD",
               stop("Can only zip RDDs which have the same number of partitions.")
             }
 
-            doZipOrCartesian(x, other, "zip")
+            rdds <- appendPartitionLengths(x, other)
+            jrdd <- callJMethod(getJRDD(rdds[[1]]), "zip", getJRDD(rdds[[2]]))
+            # The jrdd's elements are of scala Tuple2 type. The serialized
+            # flag here is used for the elements inside the tuples.
+            rdd <- RDD(jrdd, getSerializedMode(rdds[[1]]))
+            
+            mergePartitions(rdd, TRUE)
           })
 
 #' Cartesian product of this RDD and another one.
@@ -1487,7 +1493,13 @@ setMethod("zipRDD",
 setMethod("cartesian",
           signature(x = "RDD", other = "RDD"),
           function(x, other) {
-            doZipOrCartesian(x, other, "cartesian")
+            rdds <- appendPartitionLengths(x, other)
+            jrdd <- callJMethod(getJRDD(rdds[[1]]), "cartesian", getJRDD(rdds[[2]]))
+            # The jrdd's elements are of scala Tuple2 type. The serialized
+            # flag here is used for the elements inside the tuples.
+            rdd <- RDD(jrdd, getSerializedMode(rdds[[1]]))
+            
+            mergePartitions(rdd, FALSE)
           })
 
 #' Subtract an RDD with another RDD.

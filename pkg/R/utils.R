@@ -420,16 +420,8 @@ cleanClosure <- function(func, checkedFuncs = new.env()) {
   func
 }
 
-# Common function for implmentation of zipRDD() and cartesian().
-# param
-#   x An RDD.
-#   other An RDD.
-#   operation The specified operation, "zip" or "cartesian".
-#
-# return value
-#   The result RDD.
-doZipOrCartesian <- function(x, other, operation = c("zip", "cartesian")) {
-  match.arg(operation)
+# Append partition lengths to each partition in two input RDDs if needed.
+appendPartitionLengths <- function(x, other) {
   if (getSerializedMode(x) != getSerializedMode(other) || 
       getSerializedMode(x) == "byte") {
     # Append the number of elements in each partition to that partition so that we can later
@@ -447,13 +439,12 @@ doZipOrCartesian <- function(x, other, operation = c("zip", "cartesian")) {
     x <- lapplyPartition(x, appendLength)
     other <- lapplyPartition(other, appendLength)
   }
-  
-  jrdd <- callJMethod(getJRDD(x), operation, getJRDD(other))
-  # The jrdd's elements are of scala Tuple2 type. The serialized
-  # flag here is used for the elements inside the tuples.
-  serializerMode <- getSerializedMode(x)
-  rdd <- RDD(jrdd, serializerMode)
-  
+  list (x, other)
+}
+
+# Perform zip or cartesian between elements from two RDDs in each partition
+mergePartitions <- function(rdd, zip) {
+  serializerMode <- getSerializedMode(rdd)
   partitionFunc <- function(split, part) {
     len <- length(part)
     if (len > 0) {
@@ -463,7 +454,7 @@ doZipOrCartesian <- function(x, other, operation = c("zip", "cartesian")) {
         stopifnot(len == lengthOfKeys + lengthOfValues)
         
         # For zip operation, check if corresponding partitions of both RDDs have the same number of elements.
-        if (operation == "zip" && lengthOfKeys != lengthOfValues) {
+        if (zip && lengthOfKeys != lengthOfValues) {
           stop("Can only zip RDDs with same number of elements in each pair of corresponding partitions.")
         }
         
@@ -478,7 +469,7 @@ doZipOrCartesian <- function(x, other, operation = c("zip", "cartesian")) {
           values <- list()
         }
         
-        if (operation == "cartesian") {
+        if (!zip) {
           return(mergeCompactLists(keys, values))
         }
       } else {
