@@ -43,6 +43,8 @@
 
 <p>SparkR is an R package that provides a light-weight frontend to use Apache Spark from R. SparkR exposes the Spark API through the <code>RDD</code> class and allows users to interactively run jobs from the R shell on a cluster.</p>
 
+<p><i>NOTE: As of April 2015, SparkR has been <a href="https://github.com/apache/spark/pull/5096">officially merged</a> into Apache Spark and is shipping in an upcoming release (1.4) due early summer 2015.</i></p>
+
 <h2>
 <a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
 
@@ -88,9 +90,9 @@
 <h2>
 <a name="installing-sparkr" class="anchor" href="#installing-sparkr"><span class="octicon octicon-link"></span></a>Installing SparkR</h2>
 
-<p>SparkR requires Scala 2.10 and Spark version &gt;= 1.1.0 (support for Spark 1.3.0 coming soon) and depends on R packages <code>testthat</code> (only required for running unit tests). </p>
+<p>SparkR requires Scala 2.10 and Spark version &gt;= 1.1.0 and depends on the R package <code>testthat</code> (only required for running unit tests).</p>
 
-<p>For lastest information, please refer to <a href="https://github.com/amplab-extras/SparkR-pkg/blob/master/README.md">README</a>. </p>
+<p>For lastest information, please refer to <a href="https://github.com/amplab-extras/SparkR-pkg/blob/master/README.md">README</a>.</p>
 
 <p>If you wish to try out SparkR, you can use <code>install_github</code> from the <code>devtools</code> package to directly install the package.</p>
 
@@ -135,8 +137,7 @@ To run one of them, use <code>./sparkR &lt;filename&gt; &lt;args&gt;</code>. For
 <h2>
 <a name="feedback-sparkr" class="anchor" href="#feedback-sparkr"><span class="octicon octicon-link"></span></a>Report Issues and Feedback</h2>  
 
-<p>You can report issues and provide feedback through <a href="https://sparkr.atlassian.net/browse/SPARKR/">Feedback</a>.
-For more information, please refer to <a href="https://github.com/amplab-extras/SparkR-pkg/blob/master/README.md">README</a></p>  
+<p>For better tracking and collaboration, issues and TODO items are reported to the <a href="https://issues.apache.org/jira/browse/SPARK">Apache Spark JIRA</a> under the component tag "SparkR". For more information, please refer to <a href="https://github.com/amplab-extras/SparkR-pkg/blob/master/README.md">README</a>.</p>
   
 
       </section>
