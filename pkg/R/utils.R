@@ -421,6 +421,11 @@ cleanClosure <- function(func, checkedFuncs = new.env()) {
 }
 
 # Append partition lengths to each partition in two input RDDs if needed.
+# param
+#   x An RDD.
+#   Other An RDD.
+# return value
+#   A list of two result RDDs.
 appendPartitionLengths <- function(x, other) {
   if (getSerializedMode(x) != getSerializedMode(other) || 
       getSerializedMode(x) == "byte") {
@@ -443,6 +448,11 @@ appendPartitionLengths <- function(x, other) {
 }
 
 # Perform zip or cartesian between elements from two RDDs in each partition
+# param
+#   rdd An RDD.
+#   zip A boolean flag indicating this call is for zip operation or not.
+# return value
+#   A result RDD.
 mergePartitions <- function(rdd, zip) {
   serializerMode <- getSerializedMode(rdd)
   partitionFunc <- function(split, part) {
