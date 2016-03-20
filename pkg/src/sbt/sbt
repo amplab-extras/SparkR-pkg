@@ -21,7 +21,8 @@
 # version of sbt. If there is no system version of sbt it attempts to download
 # sbt locally.
 SBT_VERSION=`awk -F "=" '/sbt\\.version/ {print $2}' ./project/build.properties`
-URL1=http://typesafe.artifactoryonline.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/${SBT_VERSION}/sbt-launch.jar
+#URL1=http://typesafe.artifactoryonline.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/${SBT_VERSION}/sbt-launch.jar
+URL1=https://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/${SBT_VERSION}/sbt-launch.jar
 URL2=http://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/${SBT_VERSION}/sbt-launch.jar
 JAR=sbt/sbt-launch-${SBT_VERSION}.jar
 
@@ -30,9 +31,9 @@ if [ ! -f ${JAR} ]; then
   # Download
   printf "Attempting to fetch sbt\n"
   if hash curl 2>/dev/null; then
-    curl --progress-bar ${URL1} > ${JAR} || curl --progress-bar ${URL2} > ${JAR}
+    curl --progress-bar -L ${URL1} > ${JAR} || curl --progress-bar -L ${URL2} > ${JAR}
   elif hash wget 2>/dev/null; then
-    wget --progress=bar ${URL1} -O ${JAR} || wget --progress=bar ${URL2} -O ${JAR}
+    wget --progress-bar -L ${URL1} -O ${JAR} || wget --progress-bar -L ${URL2} -O ${JAR}
   else
     printf "You do not have curl or wget installed, please install sbt manually from http://www.scala-sbt.org/\n"
     exit -1
